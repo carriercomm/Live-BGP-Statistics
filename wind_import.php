@@ -108,7 +108,7 @@ for ( $o=0; $o< count($arrOutput[0]['children'][0]['children']); $o++ )  {
 	if ($arrOutput[0]['children'][0]['children'][$o]['attrs']['NAME']){
 
 		//Get node page from wind to fetch node owner and C Classes
-		$WIND_NODE_PAGE = file_get_html('http://wind.awmn.net/?page=nodes&node='.$arrOutput[0]['children'][0]['children'][$o]['attrs']['ID']);
+		$WIND_NODE_PAGE = file_get_html('http://'.$CONF['WIND_DOMAIN'].'/?page=nodes&node='.$arrOutput[0]['children'][0]['children'][$o]['attrs']['ID']);
 
 		//loop over all TR elements
 		foreach($WIND_NODE_PAGE->find('tr') as $row) {
