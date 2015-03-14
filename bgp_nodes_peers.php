@@ -292,7 +292,7 @@ if ($NODEID > 0){
 											}
 
 											$cclasses = array();
-											$SELECT_CCLASSES = mysql_query("SELECT * FROM cclass WHERE Node_id = '".$NODEID."' AND state = 'up' ", $db);
+											$SELECT_CCLASSES = mysql_query("SELECT * FROM cclass WHERE Node_id = '".$NODEID."' AND state = 'up' ORDER BY CClass ASC", $db);
 											while ($CCLASSES = mysql_fetch_array($SELECT_CCLASSES)){
                                         		$cclasses[] = $CCLASSES['CClass'];
 	                                        }
