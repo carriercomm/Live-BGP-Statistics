@@ -422,16 +422,16 @@ if ($NODEID > 0){
 																$SELECT_NODE_ROUTERS = mysql_query("SELECT id FROM routers_db.routers WHERE NodeID = '".$NODES[$i]."' AND Active = '1' AND Status  = 'up' ORDER BY id ASC LIMIT 0, 1", $db2);
 																if (mysql_num_rows($SELECT_NODE_ROUTERS)){
 																	$ROUTER = mysql_fetch_array($SELECT_NODE_ROUTERS);
-																	echo "<a href='http://".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."/index.php?section=lg&bgp_router=".$ROUTER['id']."&bgp_command=1&arguements=' class=\"tip_south\" title=\"View Node's BGP Routing Table on ".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."\" target='_blank'><img src='./images/nav_bgp.png' width='16' height='16' /></a> &nbsp; &nbsp; ";
+																	echo "<a href='http://".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."/index.php?section=lg&bgp_router=".$ROUTER['id']."&bgp_command=1&arguements=' target='_blank'><img src='./images/nav_bgp.png' class=\"tip_south\" title=\"View Node's BGP Routing Table on ".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."\"  width='16' height='16' /></a> &nbsp; &nbsp; ";
 																}
 						
 																if ($PREPENDS_DETECTED){
-																	echo "<a href='index.php?section=bgp_prepends&q=".$NODES[$i]."' class=\"tip_south\" title=\"View this Node's Prepends\"><img src='./images/nav_bgp_prepends.png' width='16' height='16' /></a> &nbsp; &nbsp; ";
+																	echo "<a href='index.php?section=bgp_prepends&q=".$NODES[$i]."'><img src='./images/nav_bgp_prepends.png' class=\"tip_south\" title=\"View this Node's Prepends\" width='16' height='16' /></a> &nbsp; &nbsp; ";
 																}
 																
-																echo "<a href='index.php?section=bgp_prefixes&q=".$NODES[$i]."' class=\"tip_south\" title=\"View this Node's Announced Prefixes\"><img src='./images/nav_bgp_prefixes.png' width='16' height='16' /></a> &nbsp; &nbsp; ";
-                                                                echo "<a href='http://".$CONF['WIND_DOMAIN']."/?page=nodes&node=".$NODES[$i]."' target='_blank' class=\"tip_south\" title=\"Visit Node's WiND Page\"><img src='./images/ico_wind.png' /></a> &nbsp; &nbsp; ";
-                               									echo "<a href='index.php?section=".$SECTION."&nodeid=".$NODES[$i]."&search=1&prevnode=".$NODEID."' class=\"tip_south\" title=\"View this Node's Links \"><img src='./images/nav_bgp_nodes_peers.png' width='16' height='16' /></a> &nbsp; &nbsp; ";
+																echo "<a href='index.php?section=bgp_prefixes&q=".$NODES[$i]."'><img src='./images/nav_bgp_prefixes.png' class=\"tip_south\" title=\"View this Node's Announced Prefixes\" width='16' height='16' /></a> &nbsp; &nbsp; ";
+                                                                echo "<a href='http://".$CONF['WIND_DOMAIN']."/?page=nodes&node=".$NODES[$i]."' target='_blank' ><img src='./images/ico_wind.png'class=\" tip_south\" title=\"Visit Node's WiND Page\" /></a> &nbsp; &nbsp; ";
+                               									echo "<a href='index.php?section=".$SECTION."&nodeid=".$NODES[$i]."&search=1&prevnode=".$NODEID."' ><img src='./images/nav_bgp_nodes_peers.png' class=\"tip_south\" title=\"View this Node's Links \" width='16' height='16' /></a> &nbsp; &nbsp; ";
 																?>
 															</td>
 														</tr>
