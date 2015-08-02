@@ -18,7 +18,7 @@ Here are some screenshots: https://github.com/Cha0sgr/Live-BGP-Statistics/wiki
 
 Requirements:
 
-PHP Looking Glass NG https://github.com/Cha0sgr/Live-BGP-Statistics
+PHP Looking Glass NG https://github.com/Cha0sgr/BGP-Looking-Glass-NG
 WiND https://github.com/wind-project/wind
 Tested on Ubuntu and Fedora. It should work just fine on any other distro as well.
 PHP 5.2+
