@@ -13,10 +13,12 @@ It also lists all the collected data in searchable tables for easier network tro
 
 And by consulting the WiND Database it will create a list of illegally announced prefixes on the network.
 
+Here are some screenshots: https://github.com/Cha0sgr/Live-BGP-Statistics/wiki
+
 
 Requirements:
 
-PHP Looking Glass NG https://github.com/cha0sgr/php-looking-glass-ng
+PHP Looking Glass NG https://github.com/Cha0sgr/Live-BGP-Statistics
 WiND https://github.com/wind-project/wind
 Tested on Ubuntu and Fedora. It should work just fine on any other distro as well.
 PHP 5.2+

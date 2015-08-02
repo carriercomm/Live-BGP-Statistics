@@ -247,12 +247,12 @@ if ($NODEID > 0){
 	                                                		
 	                                                		$SNODES .= "<option value=\"".$SEARCH_NODES['Node_id']."\" ";
 	                                                		if ($_GET['nodeid'] == $SEARCH_NODES['Node_id']){ 
-	                                                			$NODES .= "selected=\"selected\""; 
+	                                                			$SNODES .= "selected=\"selected\""; 
 	                                                		} 
 	                                                		$SNODES .= ">#".$SEARCH_NODES['Node_id']." - " . $SEARCH_NODES['Node_name']." - ". $SEARCH_NODES['Owner']." - ". $SEARCH_NODES['Node_area']." (".$search_cclasses.")</option>\n";
 														}	  													
 	  													
-	  													Cacher::cache()->set("snodes", $SNODES, false, 3600);  //cache for 1 hour
+	  													Cacher::cache()->set("snodes", $SNODES, false, 1);  //cache for 1 hour
     												}
         
     
