@@ -145,10 +145,10 @@ require("includes/functions.php");
 					$SELECT_CLASS_ALL = mysql_query("SELECT CClass FROM cclass WHERE 1", $db);
 					$CLASS_ALL = mysql_num_rows($SELECT_CLASS_ALL);
 
-					$SELECT_PREPENDS = mysql_query("SELECT 1 FROM prepends WHERE ( nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' AND parent_nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' ) AND state='up' ", $db);
+					$SELECT_PREPENDS = mysql_query("SELECT 1 FROM prepends WHERE ( nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." AND parent_nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." ) AND state='up' ", $db);
 					$PREPENDS = mysql_num_rows($SELECT_PREPENDS);
 
-					$SELECT_PREPENDS_ALL = mysql_query("SELECT 1 FROM prepends WHERE nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' AND parent_nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' ", $db);
+					$SELECT_PREPENDS_ALL = mysql_query("SELECT 1 FROM prepends WHERE nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." AND parent_nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." ", $db);
 					$PREPENDS_ALL = mysql_num_rows($SELECT_PREPENDS_ALL);
 					?>
 

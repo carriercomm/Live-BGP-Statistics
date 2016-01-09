@@ -236,9 +236,9 @@ if ($NODEID > 0){
 												<select name="nodeid" id="combobox" class="select_box">
 													<option value="">--Select--</option> 
 													<?
-													$SNODES = Cacher::cache()->get("snodes");
+													//$SNODES = Cacher::cache()->get("snodes");
     
-													if($SNODES === false) {
+													//if($SNODES === false) {
 	  													
   														$SELECT_NODES = mysql_query("SELECT Node_id, Node_name, Node_area, `C-Class` AS CClass, Owner FROM nodes INNER JOIN links ON nodes.Node_id = links.node1 OR nodes.Node_id = links.node2 GROUP BY Node_id ORDER BY Node_id ASC", $db);    												
 														$SNODES = '';
@@ -252,8 +252,8 @@ if ($NODEID > 0){
 	                                                		$SNODES .= ">#".$SEARCH_NODES['Node_id']." - " . $SEARCH_NODES['Node_name']." - ". $SEARCH_NODES['Owner']." - ". $SEARCH_NODES['Node_area']." (".$search_cclasses.")</option>\n";
 														}	  													
 	  													
-	  													Cacher::cache()->set("snodes", $SNODES, false, 1);  //cache for 1 hour
-    												}
+	  												//	Cacher::cache()->set("snodes", $SNODES, false, 1);  //cache for 1 hour
+    												//}
         
     
     												echo $SNODES;
@@ -294,7 +294,21 @@ if ($NODEID > 0){
 											$cclasses = array();
 											$SELECT_CCLASSES = mysql_query("SELECT * FROM cclass WHERE Node_id = '".$NODEID."' AND state = 'up' ORDER BY CClass ASC", $db);
 											while ($CCLASSES = mysql_fetch_array($SELECT_CCLASSES)){
-                                        		$cclasses[] = $CCLASSES['CClass'];
+												
+												$SELECT_OWNER = mysql_query("SELECT Owner, Node_id, Node_name FROM nodes WHERE `C-Class` LIKE '%".str_replace ("/24", "", $CCLASSES['CClass'])."%' ", $db);
+												$OWNER = mysql_fetch_array($SELECT_OWNER);
+                                                
+                                                if ($OWNER['Owner']){
+	                                                if (trim($NODE['Owner']) == trim($OWNER['Owner']) ){
+														$NODE_CCLASS = "<font color='green'>" . $CCLASSES['CClass'] . "</font>";																									
+													}else{
+														$NODE_CCLASS = "<font color='red'>" . $CCLASSES['CClass'] . "</font>";													
+													}
+												}else{
+													$NODE_CCLASS = "<font color='red'>" . $CCLASSES['CClass'] . "</font>";													
+												}
+
+                                        		$cclasses[] = $NODE_CCLASS;
 	                                        }
 
 											$CCLASSES = implode ("\n", $cclasses);
@@ -322,11 +336,11 @@ if ($NODEID > 0){
 											</tr>
 											<?}else{?>
 											<tr>
-												<td colspan="2" bgcolor="#F7F9F9" ><span class="subtitle"><font color="blue">Announced Prefixes:<br>
-												<?=nl2br($CCLASSES);?></font></span></td>
+												<td colspan="2" bgcolor="#F7F9F9" ><span class="subtitle"><font color="blue">Announced Prefixes:</font><br>
+												<?=nl2br($CCLASSES);?></span></td>
 											</tr>
 											<tr>
-												<td colspan="2" bgcolor="#F7F9F9"><span class="subtitle"><font color="red">Node Peers:</font></span></td>
+												<td colspan="2" bgcolor="#F7F9F9"><span class="subtitle"><font color="brown">Node Peers:</font></span></td>
 											</tr>
 											<?
 											$NODES = FALSE;
@@ -354,9 +368,11 @@ if ($NODEID > 0){
 												$TIME[$NODES[$i]] = $NODE2['date'];
 												$i++;
 											}
-											//  echo "<!--";
-											//  print_r ($NODES);
-											//  echo "-->";
+											
+											
+											  //echo "<!--";
+											  //var_dump($TIME);
+											  //echo "-->";
 											if ($i > 0){
 												$NODES = array_values(array_unique($NODES));
 												//  echo "<!--";
@@ -393,13 +409,13 @@ if ($NODEID > 0){
 																<?}?>
 															
 																<?
-                                                                if ($NODES[$i] <=$CONF['WIRELESS_COMMUNITY_MAX_ASN']){
+                                                                if ($NODES[$i] <=$CONF['WIRELESS_COMMUNITY_MAX_ASN']){     
                                                                 	if ($CCLASS[$NODES[$i]] ==''){
-																		$CCLASS[$NODES[$i]] = '<font color=\'red\'>--</font>';
+																		$peer_cclass = '<font color=\'red\'>--</font>';
 																	}else{
-																		$CCLASS[$NODES[$i]] = str_replace ("\n", ", ", $CCLASS[$NODES[$i]] );		
+																		$peer_cclass = str_replace ("\n", ", ", $CCLASS[$NODES[$i]] ); 		
 																	}
-																	echo "&nbsp;<span class='small'><font color='green'>C-Class: <strong>".$CCLASS[$NODES[$i]]."</strong> </font></span>";
+																	echo "&nbsp;<span class='small'><font color='green'>C-Class: <strong>".$peer_cclass."</strong> </font></span>";
                                                                 }		
 																
 																$PREPENDS = '';

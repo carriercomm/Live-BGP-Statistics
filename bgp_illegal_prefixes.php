@@ -56,7 +56,7 @@ $mysql_table = 'cclass';
 								<tr>
 									<th>Node ID</th>
 									<th>Assigned Prefixes</th>
-									<th>Illegal Prefixes</th>
+									<th>Illegal Prefixes Advertised</th>
 									</tr>
 									<!-- RESULTS START -->
 									<?
@@ -94,7 +94,7 @@ $mysql_table = 'cclass';
 									}
 
 
-									if ($class && (int)$NODEID < 22000  ){
+									if ($class && (int)$NODEID < $CONF['WIRELESS_COMMUNITY_MAX_ASN']  ){
 									//if ($class && (int)$NODEID != 8580 && (int)$NODEID < 39999  ){
 									//echo "Node: #". $NODEID . " " . $NODENAME . "<br>\n";
 									//print_r($class);
@@ -104,7 +104,7 @@ $mysql_table = 'cclass';
 
 									?>      
 									<tr onmouseover="this.className='on' " onmouseout="this.className='off' ">
-										<td nowrap><b>#<?=$NODEID;?><?if ($NODENAME){echo " - ". $NODENAME;}?></b> <font color='orange'>(<?=trim($NODE_OWNER['Owner']);?>)</font></td>
+										<td nowrap><b><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$NODEID;?>">#<?=$NODEID;?><?if ($NODENAME){echo " - ". $NODENAME;}?></a></b> <font color='orange'>(<?=trim($NODE_OWNER['Owner']);?>)</font></td>
 										<td nowrap>
 											<b><?
 											foreach( $cclasses2 as $nodevalidcclass ){
@@ -124,7 +124,7 @@ $mysql_table = 'cclass';
 													}else{
 														$color = 'brown';
 													}
-													$real_class_owner = "<font color='".$color."'>(#".$OWNER['Node_id']." - ".$OWNER['Node_name']." - ".trim($OWNER['Owner']).")</font>"; 
+													$real_class_owner = "<font color='".$color."'>(<a href=\"index.php?section=bgp_nodes_peers&nodeid=".$OWNER['Node_id']."\">#".$OWNER['Node_id']."</a> - ".$OWNER['Node_name']." - ".trim($OWNER['Owner']).")</font>"; 
 												}else{
 													$real_class_owner = "<font color='blue'>(unassigned)</font>";
 												}
