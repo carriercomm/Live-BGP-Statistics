@@ -288,7 +288,16 @@ if ($NODEID > 0){
                         					if ($NODE['CClass'] ==''){
 												$NODE['CClass'] = '<font color=\'red\'>--</font>';
 											}else{
-												$NODE['CClass'] = nl2br($NODE['CClass']);		
+												$nodes_cclasses = explode("\n", $NODE['CClass']);
+												$NEW_CCLASS = '';
+												foreach ($nodes_cclasses as $cclass) {
+													if (strstr($cclass, "/")){
+														$NEW_CCLASS .= trim($cclass) . "\n"; 
+													}else{
+														$NEW_CCLASS .= trim($cclass) . "/24\n";														
+													}
+												}
+												$NODE['CClass'] = nl2br($NEW_CCLASS);		
 											}
 
 											$cclasses = array();
@@ -306,6 +315,10 @@ if ($NODEID > 0){
 													}
 												}else{
 													$NODE_CCLASS = "<font color='red'>" . $CCLASSES['CClass'] . "</font>";													
+												}
+												
+												if ($CCLASSES['CClass'] == '10.0.0.1/32'){
+													$NODE_CCLASS = "<font color='green'>" . $CCLASSES['CClass'] . "</font>";													
 												}
 
                                         		$cclasses[] = $NODE_CCLASS;
