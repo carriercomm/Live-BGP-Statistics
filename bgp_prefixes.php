@@ -30,30 +30,58 @@ $sorting_array = array("id", "Node_id", "CClass", "state", "date", "Seenby");
 $action_title = "All BGP Prefixes"; 
 
 $search_vars = "";
+$not_qsql = "";
 
-$q = mysql_real_escape_string($_GET['q'], $db);
-if ($q) { 
-	if (strstr($q,"!")){
-		$not_qsql = '!';
-		$q_sql = str_replace("!", "", $q);
+$q = mysql_real_escape_string(trim($_GET['q']), $db);
+$q_op = mysql_real_escape_string(trim($_GET['q_operator']), $db);
+if ($q) {
+
+	if ($q_op == 'is'){
+		$q_op_sql = "= '" . $q . "' "; 	
+	}elseif ($q_op == 'isnot'){
+		$q_op_sql = "!= '" . $q . "' "; 	
+	}elseif ($q_op == 'contains'){
+		$q_op_sql = " LIKE '%" . $q . "%' "; 	
+	}elseif ($q_op == 'containsnot'){
+		$q_op_sql = "NOT LIKE '%" . $q . "%' "; 	
+	}elseif ($q_op == 'ge'){
+		$q_op_sql = "> '" . $q . "' "; 	
+	}elseif ($q_op == 'le'){
+		$q_op_sql = "< '" . $q . "' "; 	
 	}else{
-		$q_sql = $q;		
+		$q_op_sql = "= '" . $q . "' ";	
 	}
-	$search_vars .= "&q=$q"; 
+	
+	$search_vars .= "&q=$q&q_operator=$q_op"; 
 	$action_title = "Search: " . $q;
 }
 
-$p = mysql_real_escape_string($_GET['p'], $db);
+
+$p = mysql_real_escape_string(trim($_GET['p']), $db);
+$p_op = mysql_real_escape_string(trim($_GET['p_operator']), $db);
 if ($p) { 
-	if (strstr($p,"!")){
-		$not_psql = 'NOT ';
-		$p_sql = str_replace("!", "", $p);
+	
+	
+	if ($p_op == 'is'){
+		$p_op_sql = "= '" . $p . "' "; 	
+	}elseif ($p_op == 'isnot'){
+		$p_op_sql = "!= '" . $p . "' "; 	
+	}elseif ($p_op == 'contains'){
+		$p_op_sql = " LIKE '%" . $p . "%' "; 	
+	}elseif ($p_op == 'containsnot'){
+		$p_op_sql = "NOT LIKE '%" . $p . "%' "; 	
+	}elseif ($p_op == 'ge'){
+		$p_op_sql = "> '" . $p . "' "; 	
+	}elseif ($p_op == 'le'){
+		$p_op_sql = "< '" . $p . "' "; 	
 	}else{
-		$p_sql = $p;
-	}
-	$search_vars .= "&p=$p"; 
+		$p_op_sql = "= '" . $p . "' ";	
+	}	
+	
+	$search_vars .= "&p=$p&p_operator=$p_op"; 
 	$action_title = "Search: " . $p;
 }
+
 
 if (isset($_GET['search_state'])) {
 	$s = mysql_real_escape_string($_GET['search_state'], $db); 
@@ -64,11 +92,11 @@ if (isset($_GET['search_state'])) {
 }
 
 if ($q && $p){
-	$search_query = "WHERE ( $mysql_table.Node_id ".$not_qsql."= '$q_sql' AND $mysql_table.CClass ".$not_psql."LIKE '%$p_sql%') AND $mysql_table.state LIKE '%$s%'  ";
+	$search_query = "WHERE ( $mysql_table.Node_id ".$q_op_sql." AND $mysql_table.CClass ".$p_op_sql.") AND $mysql_table.state LIKE '%$s%'  ";
 }elseif ($q){
-	$search_query = "WHERE $mysql_table.Node_id ".$not_qsql."= '$q_sql' AND $mysql_table.state LIKE '%$s%'  ";
+	$search_query = "WHERE $mysql_table.Node_id ".$q_op_sql." AND $mysql_table.state LIKE '%$s%'  ";
 }elseif ($p){
-	$search_query = "WHERE $mysql_table.CClass ".$not_psql."LIKE '%$p_sql%' AND $mysql_table.state LIKE '%$s%'  ";
+	$search_query = "WHERE $mysql_table.CClass ".$p_op_sql." AND $mysql_table.state LIKE '%$s%'  ";
 }else{
 	$search_query = "WHERE $mysql_table.state LIKE '%$s%'  ";		
 }
@@ -152,14 +180,35 @@ $url_vars = htmlspecialchars($url_vars);
 								<input type="hidden" name="section" value="<?=$SECTION;?>" />
 								<table border="0" cellspacing="0" cellpadding="4">
 									<tr>
-										<td>AS Number Filter:</td>
-										<td><input type="text" name="q" id="search_field_q" class="input_field" value="<?=$q?>" /></td>
-
-										<td>Prefix Filter:</td>
-										<td><input type="text" name="p" id="search_field_p" class="input_field" value="<?=$p?>" /></td>
-
-										<td>Prefix State:</td>
+										<td>AS Number:</td>
 										<td>
+											<select name="q_operator" class="select_box">
+												<option value="is"   <? if ($_GET['q_operator'] == 'is'){   echo "selected=\"selected\""; }?> >Is</option>
+												<option value="isnot"   <? if ($_GET['q_operator'] == 'isnot'){   echo "selected=\"selected\""; }?> >Is not</option>
+												<option value="contains" <? if ($_GET['q_operator'] == 'contains'){ echo "selected=\"selected\""; }?> >Contains</option>
+												<option value="containsnot" <? if ($_GET['q_operator'] == 'containsnot'){ echo "selected=\"selected\""; }?> >Does not contain</option>
+												<option value="ge" <? if ($_GET['q_operator'] == 'ge'){ echo "selected=\"selected\""; }?> >Greater than</option>
+												<option value="le" <? if ($_GET['q_operator'] == 'le'){ echo "selected=\"selected\""; }?> >Less than</option>
+											</select>
+										</td>
+										<td><input type="text" name="q" id="search_field_q" class="input_field" value="<?=$q?>" style="width: 60px;"/></td>
+
+										<td>Prefix:</td>
+										<td>
+											<select name="p_operator" class="select_box">
+												<option value="is"   <? if ($_GET['p_operator'] == 'is'){   echo "selected=\"selected\""; }?> >Is</option>
+												<option value="isnot"   <? if ($_GET['p_operator'] == 'isnot'){   echo "selected=\"selected\""; }?> >Is not</option>
+												<option value="contains" <? if ($_GET['p_operator'] == 'contains'){ echo "selected=\"selected\""; }?> >Contains</option>
+												<option value="containsnot" <? if ($_GET['p_operator'] == 'containsnot'){ echo "selected=\"selected\""; }?> >Does not contain</option>
+												<option value="ge" <? if ($_GET['p_operator'] == 'ge'){ echo "selected=\"selected\""; }?> >Greater than</option>
+												<option value="le" <? if ($_GET['p_operator'] == 'le'){ echo "selected=\"selected\""; }?> >Less than</option>
+											</select>
+										</td>
+										<td><input type="text" name="p" id="search_field_p" class="input_field" value="<?=$p?>" /></td>
+                                    </tr>
+                                    <tr>
+										<td>Prefix State:</td>
+										<td colspan="2">
 											<select name="search_state" class="select_box">
 												<option value="">Any state</option> 
 												<option value="up"   <? if ($_GET['search_state'] == 'up'){   echo "selected=\"selected\""; }?> >Prefix Announced (Up)</option>
@@ -167,7 +216,7 @@ $url_vars = htmlspecialchars($url_vars);
 											</select>
 										</td>
 
-                                        <td><button type="submit"  >Search</button></td>
+                                        <td colspan="4" align="right"><button type="submit"  >Search</button></td>
 									</tr>
 								</table> 
 							</form>
@@ -175,7 +224,7 @@ $url_vars = htmlspecialchars($url_vars);
 							<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:15px; margin-top: 15px;">
 								<tr>
 									<td width="36%" height="30">
-										<h3 style="margin:0"><?=$action_title;?> <? if ($q) { ?><span style="font-size:12px"> (<a href="index.php?section=<?=$SECTION;?>" class="tip_south" title="Clear search">x</a>)</span><? } ?></h3> 
+										<h3 style="margin:0"><?=$action_title;?> <? if ($q||$p) { ?><span style="font-size:12px"> (<a href="index.php?section=<?=$SECTION;?>" class="tip_south" title="Clear search">x</a>)</span><? } ?></h3> 
 									</td>
 									<td width="28%" align="center">
 										<? if ($items_number) { ?>
@@ -205,10 +254,30 @@ $url_vars = htmlspecialchars($url_vars);
 								
 								$SELECT_NODE2 = mysql_query("SELECT * from nodes WHERE Node_id = '".$LISTING['Seenby']."' ", $db);
 								$NODE2 = mysql_fetch_array($SELECT_NODE2);
+
+
+								$SELECT_OWNER = mysql_query("SELECT Owner, Node_id, Node_name FROM nodes WHERE `C-Class` LIKE '%".str_replace ("/24", "", $LISTING['CClass'])."%' ", $db);
+								$OWNER = mysql_fetch_array($SELECT_OWNER);
+
+								$NODE_CCLASS = '';
+								if ($OWNER['Owner']){
+									if (trim($NODE1['Owner']) == trim($OWNER['Owner']) ){
+										$NODE_CCLASS = "<font color='green'>" . $LISTING['CClass'] . "</font>";																									
+									}else{
+										$NODE_CCLASS = "<font color='red'>" . $LISTING['CClass'] . "</font>";													
+									}
+								}else{
+									$NODE_CCLASS = "<font color='red'>" . $LISTING['CClass'] . "</font>";													
+								}
+
+								if ($LISTING['CClass'] == '10.0.0.1/32'){
+									$NODE_CCLASS = "<font color='green'>" . $LISTING['CClass'] . "</font>";													
+								}
+
 								
 								?>      
 								<tr onmouseover="this.className='on' " onmouseout="this.className='off' " id="tr-<?=$LISTING['id'];?>">
-									<td align="center" nowrap><?=$LISTING['CClass'];?></td>
+									<td align="center" nowrap><?=$NODE_CCLASS;?></td>
 									<td align="center" nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['Node_id'];?>" title="Show #<?=$LISTING['Node_id'];?> <?=$NODE1['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['Node_id'];?> <?=$NODE1['Node_name'];?></a></td>
 									<td align="center" nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['Seenby'];?>" title="Show #<?=$LISTING['Seenby'];?>  <?=$NODE2['Node_name'];?>Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['Seenby'];?> <?=$NODE2['Node_name'];?></a></td>
 									<td align="center" nowrap ><?=sec2hms($LISTING['date'], time());?></td>
