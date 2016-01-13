@@ -48,8 +48,8 @@ if ($NODEID > 0){
 							margin-left: -1px;
 							padding: 0;
 							/* support: IE7 */
-							*height: 1.7em;
-							*top: 0.1em;
+							height: 1.7em;
+							top: 0.1em;
 						}
 						.custom-combobox-input {
 							margin: 0;
@@ -329,9 +329,21 @@ if ($NODEID > 0){
 										<br>
 										<br>
 										<br>
+										
+										<?
+										$SELECT_CNODE_ROUTERS = mysql_query("SELECT id FROM routers_db.routers WHERE NodeID = '".$NODEID."' AND Active = '1' AND Status  = 'up' ORDER BY id ASC LIMIT 0, 1", $db2);
+										if (mysql_num_rows($SELECT_CNODE_ROUTERS)){
+											$CROUTER = mysql_fetch_array($SELECT_CNODE_ROUTERS);
+											$node_router_link_start = "<a href='http://".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."/index.php?section=lg&bgp_router=".$CROUTER['id']."&bgp_command=1&arguements=' target='_blank'  class=\"tip_south\" title=\"View Node's BGP Routing Table on ".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."\" ><img src='./images/nav_bgp.png' width='16' height='16' align='top' /> ";
+											$node_router_link_end = "</a>"; 
+											//echo "<a href='http://".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."/index.php?section=lg&bgp_router=".$CROUTER['id']."&bgp_command=1&arguements=' target='_blank'><img src='./images/nav_bgp.png' class=\"tip_south\" title=\"View Node's BGP Routing Table on ".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."\"  width='16' height='16' /></a> &nbsp; &nbsp; ";
+											
+										}
+																	
+										?>
 										<table width="80%" border="0" cellpadding="4" cellspacing="1">
 											<tr>
-												<td colspan="2" align="center" bgcolor="#E4E9E9" class="title">#<?=$NODEID;?><?if ($NODE['Node_name'] != ''){?> - <?=$NODE['Node_name'];?><?}?> <?if ($NODE['Node_area'] != ''){?><span class="small">(<?=$NODE['Node_area'];?>)</span><?}?></td>
+												<td colspan="2" align="center" bgcolor="#E4E9E9" class="title"><?=$node_router_link_start;?>#<?=$NODEID;?><?if ($NODE['Node_name'] != ''){?> - <?=$NODE['Node_name'];?><?}?><?=$node_router_link_end;?> <?if ($NODE['Node_area'] != ''){?><span class="small">(<?=$NODE['Node_area'];?>)</span><?}?></td>
 											</tr>
 											<tr>
 												<td colspan="2" bgcolor="#F7F9F9" ><span class="subtitle"><font color="orange">Node Administrator:</font> <a href="http://<?=$CONF['WIND_DOMAIN'];?>/?page=nodes&node=<?=$NODEID;?>&subpage=contact" title="Contact Node administrator via WiND" target="_blank"><?=$NODE['Owner'];?></a></span></td>

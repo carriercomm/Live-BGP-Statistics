@@ -173,6 +173,29 @@ require("includes/functions.php");
 							<td align="right" nowrap="nowrap" height="25" class="smalltahoma">Routers Collecting Data <img src="images/ico_routers.png" align="top"></td>
 							<td class="smalltahoma"><strong><?=$ROUTERS;?>/<?=$ROUTERS_ALL;?></strong></td>
 						</tr>
+                  <tr>
+                    <td align="right" nowrap="nowrap" height="25" class="smalltahoma">Registered Users  <img src="images/nav_staff.png" align="top"></td>
+                    <td class="smalltahoma" nowrap="nowrap" ><strong><?=mysql_num_rows(mysql_query("SELECT 1 FROM `".$CONF['db2']."`.`staff` WHERE 1", $db2));?></strong></td>
+                  </tr>                  
+                  <tr>
+                    <td align="right" nowrap="nowrap" height="25" class="smalltahoma">Latest User Registered</td>
+                    <td class="smalltahoma" nowrap="nowrap" ><strong><?
+                        $SELECT_LATEST_USER = mysql_query("SELECT Username FROM `".$CONF['db2']."`.`staff` WHERE Active = '1' ORDER BY id DESC LIMIT 0,1;", $db2);
+                        $LATEST_USER = mysql_fetch_array($SELECT_LATEST_USER);
+                        echo $LATEST_USER['Username'];
+                    ?></strong></td>
+                  </tr>                  
+                  <tr>
+                    <td align="right" nowrap="nowrap" height="25" valign="top" class="smalltahoma">Top 10 Users with most<br/><strong>active and healthy</strong> routers</td>
+                    <td class="smalltahoma" nowrap="nowrap" ><br /><strong><?
+                        $SELECT_TOP_USER = mysql_query("SELECT User_id, count(User_id) as Total FROM `".$CONF['db2']."`.`routers` WHERE User_id != '33' AND `Status` = 'up' AND Active = '1' GROUP BY User_id ORDER BY Total DESC, User_id DESC LIMIT 0,10;", $db2);
+                        while ($TOP_USER = mysql_fetch_array($SELECT_TOP_USER)){
+                        $SELECT_USER = mysql_query("SELECT Username FROM `".$CONF['db2']."`.`staff` WHERE id = '".$TOP_USER['User_id']."' ", $db2);
+                        $TOP_USERNAME = mysql_fetch_array($SELECT_USER);
+                        echo $TOP_USERNAME['Username'] . " (" . $TOP_USER['Total'] . ") <br />";
+						}
+                    ?></strong></td>
+                  </tr>
 						<tr>
 							<td align="center" nowrap="nowrap" height="25" colspan="2" class="smalltahoma"><h2 class="sidebar_title"></h2></td>
 						</tr>                  

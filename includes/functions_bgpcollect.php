@@ -158,6 +158,13 @@ function logtime (){
 	return "[" . date("M d H:i:s") . "]";
 }
 
+function eventlog ($msg){
+	global $db;
+	
+	mysql_query("INSERT INTO `eventlog` (`msg`) VALUES ('".mysql_real_escape_string($msg)."') ", $db);
+	
+}
+
 
 function detect_prepends ($AS1, $AS2, $AS_PATH, $IS_PREPEND, $PRINT, $ROUTERAS){
 	global $db, $IS_PREPEND;
@@ -247,7 +254,7 @@ function add2db ($AS1, $AS2, $ROUTERAS, $PRINT=FALSE){
 			}
 		}
 	}
-
+    /*
 	$SELECT_LINK_DOWN = mysql_query ("SELECT id FROM links WHERE node1 = '" . $AS2 ."' AND node2 = '" . $AS1 ."' AND state = 'down' ", $db);
     if (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
         if (mysql_query (  "UPDATE links  SET  `date` = UNIX_TIMESTAMP( ), state='up', byrouter=".$ROUTERAS."  WHERE node1 = '" . $AS2 ."' AND node2 = '" . $AS1 ."' ", $db)){
@@ -256,6 +263,7 @@ function add2db ($AS1, $AS2, $ROUTERAS, $PRINT=FALSE){
 			}
 		}
     }
+    */
 }
 
 //Utility Function to INSERT or UPDATE database.
@@ -285,23 +293,27 @@ function add2dbprepends ($NODEID, $PARENTNODEID, $PRINT=FALSE){
 			if ($PRINT == TRUE){
 				echo  logtime() . "PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly inserted.\n";
 			}
+			eventlog("PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly inserted.");
 		}
     }elseif (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
 		if (mysql_query (  "UPDATE prepends  SET  `date` = UNIX_TIMESTAMP( ), state='up'  WHERE nodeid = '" . $NODEID ."' AND parent_nodeid = '" . $PARENTNODEID ."' ", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly updated.\n";
 			}
+			eventlog("PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly updated.");
 		}
     }
-
+    /*
 	$SELECT_LINK_DOWN = mysql_query ("SELECT id FROM prepends WHERE nodeid = '" . $NODEID ."' AND parent_nodeid = '" . $PARENTNODEID ."' AND state = 'down' ", $db);
 	if (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
 		if (mysql_query (  "UPDATE prepends  SET  `date` = UNIX_TIMESTAMP( ), state='up'  WHERE nodeid = '" . $NODEID ."' AND parent_nodeid = '" . $PARENTNODEID ."' ", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly updated.\n";
 			}
+			eventlog("PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly updated.");
 		}
 	}
+	*/
 }
 
 //Utility Function to INSERT or UPDATE database.
@@ -326,23 +338,27 @@ function ad2dbcclass ($AS, $CCLASS, $SEENBY, $PRINT=FALSE){
 			if ($PRINT == TRUE){
 				echo  logtime() . " C-Class " . $CCLASS . " from #" . $AS ." successfuly inserted.\n";
 			}
+			eventlog("C-CLASS " . $CCLASS . " from #" . $AS ." successfuly inserted.");
 		}
 	}elseif (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
 		if (mysql_query (  "UPDATE cclass  SET  `date` = UNIX_TIMESTAMP( ), state='up', Seenby = '".$SEENBY."' WHERE Node_id = '" . $AS ."' AND CCLass = '".$CCLASS."' ", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " C-Class ".$CCLASS." from #" . $AS ." successfuly updated.\n";
 			}
+			eventlog("C-CLASS " . $CCLASS . " from #" . $AS ." successfuly updated.");
 		}
 	}
-
+    /*
 	$SELECT_LINK_DOWN = mysql_query ("SELECT id FROM cclass WHERE Node_id = '" . $AS ."' AND CClass = '" . $CCLASS ."' AND state = 'down' ", $db);
 	if (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
 		if (mysql_query (  "UPDATE cclass  SET  `date` = UNIX_TIMESTAMP( ), state='up', Seenby='".$SEENBY."'  WHERE Node_id = '" . $AS ."' AND CClass = '" . $CCLASS ."' ", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " C-Class '" . $CCLASS ." from #" . $AS . "' successfuly updated.\n";
 			}
+			eventlog("C-CLASS " . $CCLASS . " from #" . $AS ." successfuly updated.");
 		}
 	}	
+	*/
 }
 
 //Utility Function to INSERT or UPDATE database.

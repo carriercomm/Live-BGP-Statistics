@@ -185,10 +185,10 @@ $url_vars = htmlspecialchars($url_vars);
 											<select name="q_operator" class="select_box">
 												<option value="is"   <? if ($_GET['q_operator'] == 'is'){   echo "selected=\"selected\""; }?> >Is</option>
 												<option value="isnot"   <? if ($_GET['q_operator'] == 'isnot'){   echo "selected=\"selected\""; }?> >Is not</option>
+												<option value="ge" <? if ($_GET['q_operator'] == 'ge'){ echo "selected=\"selected\""; }?> >Is Greater than</option>
+												<option value="le" <? if ($_GET['q_operator'] == 'le'){ echo "selected=\"selected\""; }?> >Is Less than</option>
 												<option value="contains" <? if ($_GET['q_operator'] == 'contains'){ echo "selected=\"selected\""; }?> >Contains</option>
 												<option value="containsnot" <? if ($_GET['q_operator'] == 'containsnot'){ echo "selected=\"selected\""; }?> >Does not contain</option>
-												<option value="ge" <? if ($_GET['q_operator'] == 'ge'){ echo "selected=\"selected\""; }?> >Greater than</option>
-												<option value="le" <? if ($_GET['q_operator'] == 'le'){ echo "selected=\"selected\""; }?> >Less than</option>
 											</select>
 										</td>
 										<td><input type="text" name="q" id="search_field_q" class="input_field" value="<?=$q?>" style="width: 60px;"/></td>
@@ -198,10 +198,10 @@ $url_vars = htmlspecialchars($url_vars);
 											<select name="p_operator" class="select_box">
 												<option value="is"   <? if ($_GET['p_operator'] == 'is'){   echo "selected=\"selected\""; }?> >Is</option>
 												<option value="isnot"   <? if ($_GET['p_operator'] == 'isnot'){   echo "selected=\"selected\""; }?> >Is not</option>
+												<option value="ge" <? if ($_GET['p_operator'] == 'ge'){ echo "selected=\"selected\""; }?> >Is Greater than</option>
+												<option value="le" <? if ($_GET['p_operator'] == 'le'){ echo "selected=\"selected\""; }?> >Is Less than</option>
 												<option value="contains" <? if ($_GET['p_operator'] == 'contains'){ echo "selected=\"selected\""; }?> >Contains</option>
 												<option value="containsnot" <? if ($_GET['p_operator'] == 'containsnot'){ echo "selected=\"selected\""; }?> >Does not contain</option>
-												<option value="ge" <? if ($_GET['p_operator'] == 'ge'){ echo "selected=\"selected\""; }?> >Greater than</option>
-												<option value="le" <? if ($_GET['p_operator'] == 'le'){ echo "selected=\"selected\""; }?> >Less than</option>
 											</select>
 										</td>
 										<td><input type="text" name="p" id="search_field_p" class="input_field" value="<?=$p?>" /></td>
@@ -279,7 +279,7 @@ $url_vars = htmlspecialchars($url_vars);
 								<tr onmouseover="this.className='on' " onmouseout="this.className='off' " id="tr-<?=$LISTING['id'];?>">
 									<td align="center" nowrap><?=$NODE_CCLASS;?></td>
 									<td align="center" nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['Node_id'];?>" title="Show #<?=$LISTING['Node_id'];?> <?=$NODE1['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['Node_id'];?> <?=$NODE1['Node_name'];?></a></td>
-									<td align="center" nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['Seenby'];?>" title="Show #<?=$LISTING['Seenby'];?>  <?=$NODE2['Node_name'];?>Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['Seenby'];?> <?=$NODE2['Node_name'];?></a></td>
+									<td align="center" nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['Seenby'];?>" title="Show #<?=$LISTING['Seenby'];?>  <?=$NODE2['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['Seenby'];?> <?=$NODE2['Node_name'];?></a></td>
 									<td align="center" nowrap ><?=sec2hms($LISTING['date'], time());?></td>
 									<td align="center" nowrap ><a href="javascript:void(0)" class="<?if (staff_help()){?>tip_south<?}?> <? if ($LISTING['state'] == 'up') { ?>enabled<? } else { ?>disabled<? } ?>" title="Prepend is: <?=strtoupper($LISTING['state']);?>"><span>Prepend is: <?=strtoupper($LISTING['state']);?></span></a></td>
                             	</tr>

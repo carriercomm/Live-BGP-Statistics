@@ -32,6 +32,8 @@ include('Net/SSH2.php');
 //Fill Nodes Table with Node ID + Node Name from WiND
 //include("/var/www/html/links/xml2array.php");
 
+eventlog("Started BGP Collect daemon");
+
 // Run on endless loop
 while (1){
 
@@ -204,6 +206,7 @@ while (1){
 			while ($DAT = mysql_fetch_array($SELECT)){
 				$IDs[$t] =  $DAT['id'];
 				echo  logtime() . " ---> Link ".$DAT['node1'] . "-" . $DAT['node2']." is set to be disabled.\n";
+				eventlog("LINK ".$DAT['node1'] . "-" . $DAT['node2']." is disabled.");
 				$t++;
 			}
 			mysql_query("UPDATE links SET state = 'down', `date` = UNIX_TIMESTAMP ( ) WHERE id IN (".join (",", $IDs).")", $db);
@@ -221,6 +224,7 @@ while (1){
 			while ($DAT = mysql_fetch_array($SELECT)){
 				$IDs[$t] =  $DAT['id'];
 				echo  logtime() . " ---> C-Class ".$DAT['CClass'] . " from #" . $DAT['Node_id']." is set to be disabled.\n";
+				eventlog("C-CLASS ".$DAT['CClass'] . " from #" . $DAT['Node_id']." is disabled.");
 				$t++;
 			}
 			mysql_query("UPDATE cclass SET state = 'down', `date` = UNIX_TIMESTAMP ( ) WHERE id IN (".join (",", $IDs).")", $db);
@@ -238,6 +242,7 @@ while (1){
 			while ($DAT = mysql_fetch_array($SELECT)){
 				$IDs[$t] =  $DAT['id'];
 				echo  logtime() . " ---> PREPEND ".$DAT['nodeid'] . " - " . $DAT['parent_nodeid']." is set to be disabled.\n";
+				eventlog("PREPEND ".$DAT['nodeid'] . " - " . $DAT['parent_nodeid']." is disabled");
 				$t++;
 			}
 			mysql_query("UPDATE prepends SET state = 'down', `date` = UNIX_TIMESTAMP ( ) WHERE id IN (".join (",", $IDs).")", $db);
@@ -245,14 +250,26 @@ while (1){
 		}
 
 		//DELETE DOWNED LINKS OLDER THAN 30 DAYS
+		$SELECT_DOWNED_LINKS = mysql_query("SELECT node1, node2 FROM links WHERE date <= '".(time()-2592000)."' AND state = 'down' ");
+		while($DOWNED_LINKS = mysql_fetch_array($SELECT_DOWNED_LINKS)){
+			eventlog("LINK " . $DOWNED_LINKS['node1'] . "-" . $DOWNED_LINKS['node2'] . " has been down for over 30 days. Deleting.");
+		}
 		mysql_query("DELETE FROM links WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
 		
 		//DELETE DOWNED C-CLASS OLDER THAN 30 DAYS
+		$SELECT_DOWNED_CCLASS = mysql_query("SELECT CClass, Node_id FROM cclass WHERE date <= '".(time()-2592000)."' AND state = 'down' ");
+		while($DOWNED_CCLASS = mysql_fetch_array($SELECT_DOWNED_CCLASS)){
+			eventlog("C-CLASS " . $DOWNED_CCLASS['CClass'] . " from #" . $DOWNED_CCLASS['Node_id'] . " has been down for over 30 days. Deleting.");
+		}
 		mysql_query("DELETE FROM cclass WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
-
+		
 		//DELETE DOWNED PREPENDS OLDER THAN 30 DAYS
+		$SELECT_DOWNED_PREPEND = mysql_query("SELECT nodeid, parent_nodeid FROM prepends WHERE date <= '".(time()-2592000)."' AND state = 'down' ");
+		while($DOWNED_PREPEND = mysql_fetch_array($SELECT_DOWNED_PREPEND)){
+			eventlog("PREPEND " . $DOWNED_PREPEND['nodeid'] . "-" . $DOWNED_PREPEND['parent_nodeid'] . " has been down for over 30 days. Deleting.");
+		}
 		mysql_query("DELETE FROM prepends WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
-
+        
 		
 		echo  "\n" . logtime() . " ---> DATA GATHERING COMPLETE!\n\n\n";
 
