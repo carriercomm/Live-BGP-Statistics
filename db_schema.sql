@@ -31,13 +31,25 @@ CREATE TABLE IF NOT EXISTS `cclass_temp` (
   KEY `node2` (`CClass`)
 ) ENGINE=MEMORY  DEFAULT CHARSET=latin1 AUTO_INCREMENT=0 ;
 
-DROP TABLE IF EXISTS `eventlog`;
-CREATE TABLE IF NOT EXISTS `eventlog` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+DROP TABLE IF EXISTS `events`;
+CREATE TABLE IF NOT EXISTS `events` (
+  `id` bigint(10) NOT NULL AUTO_INCREMENT,
   `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `msg` text NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `event_code` varchar(20) NOT NULL,
+  `node1` int(10) NOT NULL,
+  `node2` int(10) NOT NULL,
+  `seenby` int(10) NOT NULL,
+  `router_ip` varchar(19) NOT NULL,
+  `prefix` varchar(19) NOT NULL,
+  `event_msg` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `date` (`date`),
+  KEY `event_code` (`event_code`),
+  KEY `node1` (`node1`),
+  KEY `router_id` (`router_ip`),
+  KEY `prefix` (`prefix`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=0 ;
+
 
 DROP TABLE IF EXISTS `links`;
 CREATE TABLE IF NOT EXISTS `links` (

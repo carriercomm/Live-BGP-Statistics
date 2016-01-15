@@ -248,6 +248,13 @@ pre {
     padding:0 5px 0 25px 
 }
 
+#navigation li.menu_bgp_eventlog a span { 
+    background: url(../images/nav_eventlog.png) 5px center no-repeat; 
+    padding:0 5px 0 25px 
+}
+
+
+
 #sidebar { 
 	background:#fff; 
 	width:190px; 
@@ -383,6 +390,19 @@ pre {
     
 }
 
+.maintitle_bgp_eventlog {
+    background: url(../images/nav_eventlog.png) 8px center no-repeat; 
+    font-family: Georgia, "Times New Roman", "Bitstream Charter", Times, serif;
+    font-size: 20px;
+    border:1px solid #dad7c8; 
+    border-radius: 5px;
+    -moz-border-radius: 5px; 
+    -webkit-border-radius: 5px; 
+    color:#686761; 
+    padding: 5px 5px 5px 28px;
+    
+}
+
 
 #footer { 
     height:30px; 
@@ -483,7 +503,8 @@ input[type=radio] {
     background: #f2f1ed url(../images/nav_bg.png) 50% 50% repeat-x;  
     margin:2px 0; 
     padding:2px 10px; 
-    border:1px solid #e6e4da;  
+    border:1px solid #e6e4da;
+    background-position: top;   
     border-radius: 5px; 
     -moz-border-radius: 5px; 
     -webkit-border-radius: 5px; 
@@ -514,6 +535,7 @@ input[type=radio] {
 .blue {color:blue;}
 .orange {color:orange;}
 .brown {color:brown;}
+.grey {color:grey;}
 
 .monospace {
 	font-weight: bold;

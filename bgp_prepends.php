@@ -54,9 +54,9 @@ if (isset($_GET['search_state'])) {
 }
 
 if ($q){
-	$search_query = "WHERE ( $mysql_table.nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' AND $mysql_table.parent_nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' ) AND ( $mysql_table.nodeid ".$not_qsql."= '$q_sql' ".$not_qsql_cond." $mysql_table.parent_nodeid ".$not_qsql."= '$q_sql') AND $mysql_table.state LIKE '%$s%' ";
+	$search_query = "WHERE $mysql_table.nodeid != '6076' AND ( $mysql_table.nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' AND $mysql_table.parent_nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' ) AND ( $mysql_table.nodeid ".$not_qsql."= '$q_sql' ".$not_qsql_cond." $mysql_table.parent_nodeid ".$not_qsql."= '$q_sql') AND $mysql_table.state LIKE '%$s%' ";
 }else{
-	$search_query = "WHERE ( $mysql_table.nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." AND $mysql_table.parent_nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." ) AND $mysql_table.state LIKE '%$s%' ";
+	$search_query = "WHERE $mysql_table.nodeid != '6076' AND ( $mysql_table.nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." AND $mysql_table.parent_nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." ) AND $mysql_table.state LIKE '%$s%' ";
 }
 
 

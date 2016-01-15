@@ -32,7 +32,8 @@ include('Net/SSH2.php');
 //Fill Nodes Table with Node ID + Node Name from WiND
 //include("/var/www/html/links/xml2array.php");
 
-eventlog("Started BGP Collect daemon");
+//eventlog("Started BGP Collect daemon");
+eventlog('DAEMONSTART');
 
 // Run on endless loop
 while (1){
@@ -72,8 +73,11 @@ while (1){
 				echo logtime() ." [BGP] -> Got ". $ROUTERAS ."!\n";
 			}else{
 				echo "NOT OK :-(\n";
+				
 			}
 
+			// Wait before reconnecting			
+			sleep(1);
 			//GET BGP TABLE FROM ROUTER
 			if ($ROUTERAS){                 
 				echo logtime() . " [BGP] -> Reading BGP Routing Table from #" . $ROUTERAS . "...\n";
@@ -82,6 +86,8 @@ while (1){
 					echo logtime() ." [BGP] -> BGPLINES RECEIVED IS OK!\n";
 				}else{
 					echo logtime() ." [BGP] -> BGPLINES RECEIVED IS NOT OK :-(\n";
+					//eventlog("SKIPPED Router #" . $ROUTERS['NodeID'] . " ". $ROUTERS['NodeName'] . " - ".$ROUTERS['RouterName'] ." Type: ".$ROUTERS['Type'] . " (".$ROUTERS['Ip'].":".$ROUTERS['Port'] ."). Could not read BGP Routing Table");
+					eventlog ('ROUTERSKIP', false, false, false, $router["address"], false, "Could not read BGP Routing Table");
 				}
 				echo logtime() . " [BGP] -> Got Data, going to processing...\n";
 				//print_r ($BGPLINES);
@@ -124,7 +130,9 @@ while (1){
 				}
 
 			}else{
-				echo logtime() . " [ROUTER] -> Router looks down. Skipping...\n";		
+				echo logtime() . " [ROUTER] -> Router looks down. Skipping...\n";
+				//eventlog("SKIPPED Router #" . $ROUTERS['NodeID'] . " ". $ROUTERS['NodeName'] . " - ".$ROUTERS['RouterName'] ." Type: ".$ROUTERS['Type'] . " (".$ROUTERS['Ip'].":".$ROUTERS['Port'] ."). Looks down.");
+				eventlog ('ROUTERSKIP', false, false, false, $router["address"], false, "Router Looks Down");		
 			}
 
 			// PROCESS GATHERED DATA FROM ROUTER 
@@ -148,7 +156,7 @@ while (1){
 					$ep1 = $e + 1;
 					$em1 = $e - 1;
 
-					if ($PREFIX_ASES <= 30){
+					if ($PREFIX_ASES <= 50){
 						if (( $ases[$e] != 'i' && $ases[$e] != 'e' && $ases[$e] != '?' && $ases[$e] != '' ) ){
 
 							//DETECT 1 HOP LINKS FIRST
@@ -201,16 +209,17 @@ while (1){
 				WHERE links.state ='up' AND (links_temp.node1 IS NULL OR links_temp.node2 IS NULL)";
 		$SELECT  = mysql_query($SQL, $db);
 		if (mysql_num_rows($SELECT) ){
-			echo  logtime() . "\n -> DISABLING NON ACTIVE LINKS.\n";
+			echo  logtime() . " -> DISABLING NON ACTIVE LINKS.\n";
 			$t = 0;
 			while ($DAT = mysql_fetch_array($SELECT)){
 				$IDs[$t] =  $DAT['id'];
 				echo  logtime() . " ---> Link ".$DAT['node1'] . "-" . $DAT['node2']." is set to be disabled.\n";
-				eventlog("LINK ".$DAT['node1'] . "-" . $DAT['node2']." is disabled.");
+				//eventlog("LINK ".$DAT['node1'] . "-" . $DAT['node2']." is DOWN.");
+				eventlog ('LINKDOWN', $DAT['node1'], $DAT['node2']);
 				$t++;
 			}
 			mysql_query("UPDATE links SET state = 'down', `date` = UNIX_TIMESTAMP ( ) WHERE id IN (".join (",", $IDs).")", $db);
-			echo  logtime() . "---> Disabled non active links.\n\n";
+			echo  logtime() . " ---> Disabled non active links.\n\n";
 		}
 
 		//DISABLE DOWNED C-CLASSES 
@@ -219,16 +228,17 @@ while (1){
 				WHERE cclass.state ='up' AND (cclass_temp.Node_id IS NULL OR cclass_temp.CClass IS NULL)";
 		$SELECT  = mysql_query($SQL, $db);
 		if (mysql_num_rows($SELECT) ){
-			echo  logtime() . "\n -> DISABLING NON ACTIVE C-CLASSES.\n";
+			echo  logtime() . " -> DISABLING NON ACTIVE C-CLASSES.\n";
 			$t = 0;
 			while ($DAT = mysql_fetch_array($SELECT)){
 				$IDs[$t] =  $DAT['id'];
 				echo  logtime() . " ---> C-Class ".$DAT['CClass'] . " from #" . $DAT['Node_id']." is set to be disabled.\n";
-				eventlog("C-CLASS ".$DAT['CClass'] . " from #" . $DAT['Node_id']." is disabled.");
+				//eventlog("C-CLASS ".$DAT['CClass'] . " from #" . $DAT['Node_id']." is DOWN.");
+				eventlog ('PREFIXDOWN', $DAT['Node_id'], false, false, false, $DAT['CClass']);
 				$t++;
 			}
 			mysql_query("UPDATE cclass SET state = 'down', `date` = UNIX_TIMESTAMP ( ) WHERE id IN (".join (",", $IDs).")", $db);
-			echo  logtime() . "---> Disabled non active c-classes.\n\n";
+			echo  logtime() . " ---> Disabled non active c-classes.\n\n";
 		}
 
 		//DISABLE DOWNED PREPENDS 
@@ -237,42 +247,51 @@ while (1){
 				WHERE prepends.state ='up' AND (prepends_temp.nodeid IS NULL OR prepends_temp.parent_nodeid IS NULL)";
 		$SELECT  = mysql_query($SQL, $db);
 		if (mysql_num_rows($SELECT) ){
-			echo  logtime() . "\n -> DISABLING NON ACTIVE PREPENDS.\n";
+			echo  logtime() . " -> DISABLING NON ACTIVE PREPENDS.\n";
 			$t = 0;
 			while ($DAT = mysql_fetch_array($SELECT)){
 				$IDs[$t] =  $DAT['id'];
 				echo  logtime() . " ---> PREPEND ".$DAT['nodeid'] . " - " . $DAT['parent_nodeid']." is set to be disabled.\n";
-				eventlog("PREPEND ".$DAT['nodeid'] . " - " . $DAT['parent_nodeid']." is disabled");
+				//eventlog("PREPEND ".$DAT['nodeid'] . " - " . $DAT['parent_nodeid']." is DOWN.");
+				eventlog ('PREPENDDOWN', $DAT['Node_id'], $DAT['parent_nodeid']);
 				$t++;
 			}
 			mysql_query("UPDATE prepends SET state = 'down', `date` = UNIX_TIMESTAMP ( ) WHERE id IN (".join (",", $IDs).")", $db);
-			echo  logtime() . "---> Disabled non active prepends.\n\n";
+			echo  logtime() . " ---> Disabled non active prepends.\n\n";
 		}
 
 		//DELETE DOWNED LINKS OLDER THAN 30 DAYS
-		$SELECT_DOWNED_LINKS = mysql_query("SELECT node1, node2 FROM links WHERE date <= '".(time()-2592000)."' AND state = 'down' ");
+		$SELECT_DOWNED_LINKS = mysql_query("SELECT node1, node2 FROM links WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
 		while($DOWNED_LINKS = mysql_fetch_array($SELECT_DOWNED_LINKS)){
-			eventlog("LINK " . $DOWNED_LINKS['node1'] . "-" . $DOWNED_LINKS['node2'] . " has been down for over 30 days. Deleting.");
+			//eventlog("LINK " . $DOWNED_LINKS['node1'] . "-" . $DOWNED_LINKS['node2'] . " has been down for over 30 days. DELETING.");
+			eventlog ('LINKDELETE', $DOWNED_LINKS['node1'], $DOWNED_LINKS['node2']);
 		}
 		mysql_query("DELETE FROM links WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
 		
 		//DELETE DOWNED C-CLASS OLDER THAN 30 DAYS
-		$SELECT_DOWNED_CCLASS = mysql_query("SELECT CClass, Node_id FROM cclass WHERE date <= '".(time()-2592000)."' AND state = 'down' ");
+		$SELECT_DOWNED_CCLASS = mysql_query("SELECT CClass, Node_id FROM cclass WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
 		while($DOWNED_CCLASS = mysql_fetch_array($SELECT_DOWNED_CCLASS)){
-			eventlog("C-CLASS " . $DOWNED_CCLASS['CClass'] . " from #" . $DOWNED_CCLASS['Node_id'] . " has been down for over 30 days. Deleting.");
+			//eventlog("C-CLASS " . $DOWNED_CCLASS['CClass'] . " from #" . $DOWNED_CCLASS['Node_id'] . " has been down for over 30 days. DELETING.");
+			eventlog ('PREFIXDELETE', $DOWNED_CCLASS['Node_id'], false, false, false, $DOWNED_CCLASS['CClass']);
 		}
 		mysql_query("DELETE FROM cclass WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
 		
 		//DELETE DOWNED PREPENDS OLDER THAN 30 DAYS
-		$SELECT_DOWNED_PREPEND = mysql_query("SELECT nodeid, parent_nodeid FROM prepends WHERE date <= '".(time()-2592000)."' AND state = 'down' ");
+		$SELECT_DOWNED_PREPEND = mysql_query("SELECT nodeid, parent_nodeid FROM prepends WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
 		while($DOWNED_PREPEND = mysql_fetch_array($SELECT_DOWNED_PREPEND)){
-			eventlog("PREPEND " . $DOWNED_PREPEND['nodeid'] . "-" . $DOWNED_PREPEND['parent_nodeid'] . " has been down for over 30 days. Deleting.");
+			//eventlog("PREPEND " . $DOWNED_PREPEND['nodeid'] . "-" . $DOWNED_PREPEND['parent_nodeid'] . " has been down for over 30 days. DELETING.");
+			eventlog ('PREPENDDELETE', $DOWNED_PREPEND['nodeid'], $DOWNED_PREPEND['parent_nodeid']);
 		}
 		mysql_query("DELETE FROM prepends WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
         
 		
 		echo  "\n" . logtime() . " ---> DATA GATHERING COMPLETE!\n\n\n";
 
+	}else{
+		echo  "\n" . logtime() . " ---> Not enough Routers alive (".$ROUTERS_TOTAL." < ".$CONF['BGP_COLLECT_MIN_ROUTERS'].") to start collecting data!\n";
+		//eventlog("Too few Alive Routers (".$ROUTERS_TOTAL." < ".$CONF['BGP_COLLECT_MIN_ROUTERS'].") to start collecting data. Waiting for 60seconds before retrying.");
+		eventlog ('DAEMONHOLD');
+		sleep(60);		
 	}
 
 	//Wait for 1 second before starting again

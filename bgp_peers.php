@@ -54,9 +54,9 @@ if (isset($_GET['search_state'])) {
 }
 
 if ($q){
-	$search_query = "WHERE ($mysql_table.node1 ".$not_qsql."= '$q_sql' ".$not_qsql_cond." $mysql_table.node2 ".$not_qsql."= '$q_sql' ) AND $mysql_table.state LIKE '%$s%'  ";
+	$search_query = "WHERE (node1 != '6076' AND node2 != '6076') AND ($mysql_table.node1 ".$not_qsql."= '$q_sql' ".$not_qsql_cond." $mysql_table.node2 ".$not_qsql."= '$q_sql' ) AND $mysql_table.state LIKE '%$s%'  ";
 }else{
-	$search_query = "WHERE $mysql_table.state LIKE '%$s%'  ";
+	$search_query = "WHERE (node1 != '6076' AND node2 != '6076') AND $mysql_table.state LIKE '%$s%'  ";
 }
 
 

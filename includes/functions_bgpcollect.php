@@ -115,6 +115,9 @@ function bgppaths2array ($router, $GETAS=FALSE, $PRINT=TRUE){
 
 		echo  logtime() . " [BGP] ->\t GOT BUFFER\n";
 
+		//wait before quiting
+		sleep(1);
+		
 		fclose ($link);
 
 		echo  logtime() . " [BGP] ->\t DISCONNECED OK!\n";
@@ -158,13 +161,82 @@ function logtime (){
 	return "[" . date("M d H:i:s") . "]";
 }
 
+/*
 function eventlog ($msg){
 	global $db;
+	mysql_query("INSERT INTO `eventlog` (`msg`) VALUES ('".mysql_real_escape_string($msg)."') ", $db);	
+}
+*/
+
+function eventlog ($EVENT_CODE, $NODE1=false, $NODE2=false, $SEENBY=false, $ROUTER_IP=false, $PREFIX=false, $EVENT_MSG=false){
+	global $db;
 	
-	mysql_query("INSERT INTO `eventlog` (`msg`) VALUES ('".mysql_real_escape_string($msg)."') ", $db);
+	$mysql_table = 'events';
+
+	if ($EVENT_CODE == 'LINKNEW'){
+		if ($NODE1 && $NODE2 && $SEENBY){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `node1`, `node2`, `seenby`) VALUES ('".$EVENT_CODE."', '".$NODE1."', '".$NODE2."', '".$SEENBY."') ";
+		}
+	}elseif ($EVENT_CODE == 'LINKUP'){
+		if ($NODE1 && $NODE2 && $SEENBY){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `node1`, `node2`, `seenby`) VALUES ('".$EVENT_CODE."', '".$NODE1."', '".$NODE2."', '".$SEENBY."') ";
+		}
+	}elseif ($EVENT_CODE == 'LINKDOWN'){
+		if ($NODE1 && $NODE2){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `node1`, `node2`) VALUES ('".$EVENT_CODE."', '".$NODE1."', '".$NODE2."') ";
+		}
+	}elseif ($EVENT_CODE == 'LINKDELETE'){
+		if ($NODE1 && $NODE2){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `node1`, `node2`) VALUES ('".$EVENT_CODE."', '".$NODE1."', '".$NODE2."') ";
+		}
+	}elseif ($EVENT_CODE == 'PREFIXNEW'){
+		if ($NODE1 && $PREFIX && $SEENBY){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `prefix`, `node1`, `seenby`) VALUES ('".$EVENT_CODE."', '".$PREFIX."', '".$NODE1."', '".$SEENBY."') ";
+		}
+	}elseif ($EVENT_CODE == 'PREFIXUP'){
+		if ($NODE1 && $PREFIX && $SEENBY){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `prefix`, `node1`, `seenby`) VALUES ('".$EVENT_CODE."', '".$PREFIX."', '".$NODE1."', '".$SEENBY."') ";
+		}
+	}elseif ($EVENT_CODE == 'PREFIXDOWN'){
+		if ($NODE1 && $PREFIX){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `prefix`, `node1`) VALUES ('".$EVENT_CODE."', '".$PREFIX."', '".$NODE1."') ";
+		}
+	}elseif ($EVENT_CODE == 'PREFIXDELETE'){
+		if ($NODE1 && $PREFIX){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `prefix`, `node1`) VALUES ('".$EVENT_CODE."', '".$PREFIX."', '".$NODE1."') ";
+		}
+	}elseif ($EVENT_CODE == 'PREPENDNEW'){
+		if ($NODE1 && $NODE2 && $SEENBY){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `node1`, `node2`, `seenby`) VALUES ('".$EVENT_CODE."', '".$NODE1."', '".$NODE2."', '".$SEENBY."') ";
+		}
+	}elseif ($EVENT_CODE == 'PREPENDUP'){
+		if ($NODE1 && $NODE2 && $SEENBY){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `node1`, `node2`, `seenby`) VALUES ('".$EVENT_CODE."', '".$NODE1."', '".$NODE2."', '".$SEENBY."') ";
+		}
+	}elseif ($EVENT_CODE == 'PREPENDDOWN'){
+		if ($NODE1 && $NODE2){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `node1`, `node2`) VALUES ('".$EVENT_CODE."', '".$NODE1."', '".$NODE2."') ";
+		}
+	}elseif ($EVENT_CODE == 'PREPENDDELETE'){
+		if ($NODE1 && $NODE2){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `node1`, `node2`) VALUES ('".$EVENT_CODE."', '".$NODE1."', '".$NODE2."') ";
+		}
+	}elseif ($EVENT_CODE == 'ROUTERSKIP'){
+		if ($ROUTER_IP && $EVENT_MSG){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `router_ip` `event_msg`) VALUES ('".$EVENT_CODE."', '".$ROUTER_IP."', '".$EVENT_MSG."') ";
+		}
+	}elseif ($EVENT_CODE == 'DAEMONSTART' || $EVENT_CODE == 'DAEMONHOLD'){
+		$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`) VALUES ('".$EVENT_CODE."') ";
+	}elseif ($EVENT_CODE == 'FATALERROR'){
+		if ($EVENT_MSG){
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `event_msg`) VALUES ('".$EVENT_CODE."', '".$EVENT_MSG."') ";
+		}
+	}
+	
+	mysql_query($SQL_Q, $db);
+	echo mysql_error();
 	
 }
-
 
 function detect_prepends ($AS1, $AS2, $AS_PATH, $IS_PREPEND, $PRINT, $ROUTERAS){
 	global $db, $IS_PREPEND;
@@ -229,47 +301,68 @@ function add2db ($AS1, $AS2, $ROUTERAS, $PRINT=FALSE){
 
 	if ($AS1 == $AS2){
 		echo  "\n\n" .logtime() . " SOMETHING WENT BAD! $AS1 - $AS2 shouldn't be sent here!!!\n\n";
+		//eventlog("FATAL ERROR  " . $AS1 ."-" . $AS2 . " shouldn't be passed on add2db()");
+		eventlog('FATALERROR', false, false, false, false, false, $AS1."-".$AS2." shouldn't be passed on add2db()");
 	}
 
 	if (!is_numeric($AS1)){
+		//eventlog("FATAL ERROR  AS1: " . $AS1 ." is not a number. add2db()");
+		eventlog('FATALERROR', false, false, false, false, false, "AS1: " . $AS1 ." is not a number. add2db()");
 		return false;
 	}
 
 	if (!is_numeric($AS2)){
+		//eventlog("FATAL ERROR  AS2: " . $AS2 ." is not a number. add2db()");
+		eventlog('FATALERROR', false, false, false, false, false, "AS2: " . $AS2 ." is not a number. add2db()");
 		return false;
 	}
 
 	$SELECT_LINK = mysql_query ("SELECT id FROM links WHERE node1 = '" . $AS1 ."' AND node2 = '" . $AS2 ."'", $db);
+	echo mysql_error();
 	$SELECT_LINK_DOWN = mysql_query ("SELECT id FROM links WHERE node1 = '" . $AS1 ."' AND node2 = '" . $AS2 ."' AND state = 'down' ", $db);
-    if (mysql_num_rows($SELECT_LINK) == 0 ){
+    echo mysql_error();
+    $LINKS = mysql_num_rows($SELECT_LINK);
+    $LINKS_DOWN = mysql_num_rows($SELECT_LINK_DOWN);
+    if ($LINKS == 0 ){
         if (mysql_query (  "INSERT INTO links  ( node1, node2, `date`, state, active, byrouter ) VALUES ( '" . $AS1 ."', '" . $AS2 . "', UNIX_TIMESTAMP( ), 'up', '1', '".$ROUTERAS."' )", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " Link '" . $AS1 ."-" . $AS2 . "' successfuly inserted.\n";
 			}
+			//eventlog("NEW LINK  " . $AS1 ."-" . $AS2 . " added. Detected by Router: " . $ROUTERAS);
+			eventlog('LINKNEW', $AS1, $AS2, $ROUTERAS);
 		}
-    }elseif (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
+		echo mysql_error();
+    }elseif ($LINKS_DOWN > 0){
 		if (mysql_query (  "UPDATE links  SET  `date` = UNIX_TIMESTAMP( ), state='up', byrouter=".$ROUTERAS." WHERE node1 = '" . $AS1 ."' AND node2 = '" . $AS2 ."' ", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " Link '" . $AS1 ."-" . $AS2 . "' successfuly updated.\n";
 			}
+			//eventlog("LINK  " . $AS1 ."-" . $AS2 . " is UP. Detected by Router: " . $ROUTERAS);
+			eventlog('LINKUP', $AS1, $AS2, $ROUTERAS);
 		}
+		echo mysql_error();
 	}
-    /*
-	$SELECT_LINK_DOWN = mysql_query ("SELECT id FROM links WHERE node1 = '" . $AS2 ."' AND node2 = '" . $AS1 ."' AND state = 'down' ", $db);
-    if (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
-        if (mysql_query (  "UPDATE links  SET  `date` = UNIX_TIMESTAMP( ), state='up', byrouter=".$ROUTERAS."  WHERE node1 = '" . $AS2 ."' AND node2 = '" . $AS1 ."' ", $db)){
-			if ($PRINT == TRUE){
-				echo  logtime() . " Link '" . $AS2 ."-" . $AS1 . "' successfuly updated.\n";
+    
+    //if (!$LINKS && !$LINKS_DOWN){
+	    $SELECT_LINK_DOWN = mysql_query ("SELECT id FROM links WHERE node1 = '" . $AS2 ."' AND node2 = '" . $AS1 ."' AND state = 'down' ", $db);
+	    if (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
+	        if (mysql_query (  "UPDATE links  SET  `date` = UNIX_TIMESTAMP( ), state='up', byrouter=".$ROUTERAS."  WHERE node1 = '" . $AS2 ."' AND node2 = '" . $AS1 ."' ", $db)){
+				if ($PRINT == TRUE){
+					echo  logtime() . " Link '" . $AS2 ."-" . $AS1 . "' successfuly updated.\n";
+				}
+				//eventlog("LINK  " . $AS2 ."-" . $AS1 . " is UP (rev). Detected by Router: " . $ROUTERAS);
+				eventlog('LINKUP', $AS2, $AS1, $ROUTERAS);
 			}
-		}
-    }
-    */
+	    }
+	    echo mysql_error();
+	//}
 }
 
 //Utility Function to INSERT or UPDATE database.
 function add2tempdb ($AS1, $AS2, $PRINT=FALSE){
 	global $db;
 	mysql_query (  "INSERT INTO links_temp  ( node1, node2) VALUES ( '" . $AS1 ."', '" . $AS2 . "' )", $db);
+	echo mysql_error();
 }
 
 
@@ -279,40 +372,51 @@ function add2dbprepends ($NODEID, $PARENTNODEID, $PRINT=FALSE){
 	global $db;
 
 	if (!is_numeric($NODEID)){
+		//eventlog("FATAL ERROR Invalid NODEID passed on add2dbprepends().");
+		eventlog('FATALERROR', false, false, false, false, false, "Invalid NODEID passed on add2dbprepends()");
 		return false;
 	}
 
 	if (!is_numeric($PARENTNODEID)){
+		//eventlog("FATAL ERROR Invalid PARENTNODEID passed on add2dbprepends().");
+		eventlog('FATALERROR', false, false, false, false, false, "Invalid PARENTNODEID passed on add2dbprepends()");
 		return false;
 	}
 
 	$SELECT_LINK = mysql_query ("SELECT id FROM prepends WHERE nodeid = '" . $NODEID ."' AND parent_nodeid = '" . $PARENTNODEID ."'", $db);
+	echo mysql_error();
 	$SELECT_LINK_DOWN = mysql_query ("SELECT id FROM prepends WHERE nodeid = '" . $NODEID ."' AND parent_nodeid = '" . $PARENTNODEID ."' AND state = 'down' ", $db);
+	echo mysql_error();
     if (mysql_num_rows($SELECT_LINK) == 0 ){
     	if (mysql_query (  "INSERT INTO prepends  ( nodeid, parent_nodeid, `date`, state) VALUES ( '" . $NODEID ."', '" . $PARENTNODEID . "', UNIX_TIMESTAMP( ), 'up')", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . "PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly inserted.\n";
 			}
-			eventlog("PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly inserted.");
+			//eventlog("NEW PREPEND " . $NODEID ."-" . $PARENTNODEID . " detected.");
+			eventlog('PREPENDNEW', $NODEID, $PARENTNODEID);
 		}
-    }elseif (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
+		echo mysql_error();
+    }elseif (mysql_num_rows($SELECT_LINK_DOWN) > 0){
 		if (mysql_query (  "UPDATE prepends  SET  `date` = UNIX_TIMESTAMP( ), state='up'  WHERE nodeid = '" . $NODEID ."' AND parent_nodeid = '" . $PARENTNODEID ."' ", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly updated.\n";
 			}
-			eventlog("PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly updated.");
+			//eventlog("PREPEND " . $NODEID ."-" . $PARENTNODEID . " is UP.");
+			eventlog('PREPENDUP', $NODEID, $PARENTNODEID);
 		}
+		echo mysql_error();
     }
     /*
-	$SELECT_LINK_DOWN = mysql_query ("SELECT id FROM prepends WHERE nodeid = '" . $NODEID ."' AND parent_nodeid = '" . $PARENTNODEID ."' AND state = 'down' ", $db);
+    $SELECT_LINK_DOWN = mysql_query ("SELECT id FROM prepends WHERE nodeid = '" . $PARENTNODEID ."' AND parent_nodeid = '" . $NODEID ."' AND state = 'down' ", $db);
 	if (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
 		if (mysql_query (  "UPDATE prepends  SET  `date` = UNIX_TIMESTAMP( ), state='up'  WHERE nodeid = '" . $NODEID ."' AND parent_nodeid = '" . $PARENTNODEID ."' ", $db)){
 			if ($PRINT == TRUE){
-				echo  logtime() . " PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly updated.\n";
+				echo  logtime() . " PREPEND '" . $PARENTNODEID ."-" . $NODEID . "' successfuly updated.\n";
 			}
-			eventlog("PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly updated.");
+			eventlog("PREPEND " . $PARENTNODEID ."-" . $NODEID . " is UP.");
 		}
 	}
+	echo mysql_error();
 	*/
 }
 
@@ -320,6 +424,7 @@ function add2dbprepends ($NODEID, $PARENTNODEID, $PRINT=FALSE){
 function add2tempdbprepends ($NODEID, $PARENTNODEID, $PRINT=FALSE){
 	global $db;
 	mysql_query (  "INSERT INTO prepends_temp  ( nodeid, parent_nodeid) VALUES ( '" . $NODEID ."', '" . $PARENTNODEID . "' )", $db);
+	echo mysql_error();
 }
 
 
@@ -328,36 +433,45 @@ function ad2dbcclass ($AS, $CCLASS, $SEENBY, $PRINT=FALSE){
 	global $db;
 
 	if (!is_numeric($AS)){
+		//eventlog("FATAL ERROR Invalid AS passed on ad2dbcclass().");
+		eventlog('FATALERROR', false, false, false, false, false, "Invalid AS passed on ad2dbcclass()");
 		return false;
 	}
 
 	$SELECT_LINK = mysql_query ("SELECT id FROM cclass WHERE Node_id = '" . $AS ."' AND CCLass = '".$CCLASS."' ", $db);
+	echo mysql_error();
 	$SELECT_LINK_DOWN = mysql_query ("SELECT id FROM cclass WHERE Node_id = '" . $AS ."' AND state = 'down' AND CCLass = '".$CCLASS."' ", $db);
+	echo mysql_error();
 	if (mysql_num_rows($SELECT_LINK) == 0 ){
 		if (mysql_query (  "INSERT INTO cclass  ( Node_id, CClass, `date`, state, Seenby ) VALUES ( '" . $AS ."', '" . $CCLASS . "', UNIX_TIMESTAMP( ), 'up', '".$SEENBY."' )", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " C-Class " . $CCLASS . " from #" . $AS ." successfuly inserted.\n";
 			}
-			eventlog("C-CLASS " . $CCLASS . " from #" . $AS ." successfuly inserted.");
+			//eventlog("NEW C-CLASS " . $CCLASS . " from #" . $AS ." added. Detected by Router: " . $SEENBY);
+			eventlog('PREFIXNEW', $AS, false, $SEENBY, false, $CCLASS);
 		}
-	}elseif (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
+		echo mysql_error();
+	}elseif (mysql_num_rows($SELECT_LINK_DOWN) > 0){
 		if (mysql_query (  "UPDATE cclass  SET  `date` = UNIX_TIMESTAMP( ), state='up', Seenby = '".$SEENBY."' WHERE Node_id = '" . $AS ."' AND CCLass = '".$CCLASS."' ", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " C-Class ".$CCLASS." from #" . $AS ." successfuly updated.\n";
 			}
-			eventlog("C-CLASS " . $CCLASS . " from #" . $AS ." successfuly updated.");
+			//eventlog("C-CLASS " . $CCLASS . " from #" . $AS ." is UP. Detected by Router: " . $SEENBY);
+			eventlog('PREFIXUP', $AS, false, $SEENBY, false, $CCLASS);
 		}
+		echo mysql_error();
 	}
     /*
-	$SELECT_LINK_DOWN = mysql_query ("SELECT id FROM cclass WHERE Node_id = '" . $AS ."' AND CClass = '" . $CCLASS ."' AND state = 'down' ", $db);
+    $SELECT_LINK_DOWN = mysql_query ("SELECT id FROM cclass WHERE Node_id = '" . $AS ."' AND CClass = '" . $CCLASS ."' AND state = 'down' ", $db);
 	if (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
 		if (mysql_query (  "UPDATE cclass  SET  `date` = UNIX_TIMESTAMP( ), state='up', Seenby='".$SEENBY."'  WHERE Node_id = '" . $AS ."' AND CClass = '" . $CCLASS ."' ", $db)){
 			if ($PRINT == TRUE){
 				echo  logtime() . " C-Class '" . $CCLASS ." from #" . $AS . "' successfuly updated.\n";
 			}
-			eventlog("C-CLASS " . $CCLASS . " from #" . $AS ." successfuly updated.");
+			eventlog("C-CLASS " . $CCLASS . " from #" . $AS ." is UP.");
 		}
 	}	
+	echo mysql_error();
 	*/
 }
 
@@ -365,6 +479,7 @@ function ad2dbcclass ($AS, $CCLASS, $SEENBY, $PRINT=FALSE){
 function ad2tempdbcclass ($AS, $CCLASS, $PRINT=FALSE){
 	global $db;
 	mysql_query (  "INSERT INTO cclass_temp  ( Node_id, CClass) VALUES ( '" . $AS ."', '" . $CCLASS . "' )", $db);
+	echo mysql_error();
 }
 
 
@@ -493,7 +608,7 @@ function mikrotik_get_bgp_table ($IP, $USER, $PASS, $PORT){
 
 		//MAKE RESULTS QUAGGA STYLE FORMATTED
 
-		$BGPLINES[] = "show ip bgp";
+		//$BGPLINES[] = "show ip bgp";
 		$BGPLINES[] = "BGP table version is 0, local router ID is $RID";
 		$BGPLINES[] = "Status codes: s suppressed, d damped, h history, * valid, > best, i - internal";
 		$BGPLINES[] = "Origin codes: i - IGP, e - EGP, ? - incomplete";

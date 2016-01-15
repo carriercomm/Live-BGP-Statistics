@@ -66,10 +66,11 @@ require("includes/functions.php");
 			<ul>
 				<li class="menu_home" ><a href="index.php" <? if ($SECTION=='' || !$SECTION) echo " class=\"selected\""; ?>><span>Dashboard</span></a></li>
 				<li class="menu_bgp_nodes_peers" ><a href="index.php?section=bgp_nodes_peers" title="Live Node's BGP Peers (Links)" <? if ($SECTION=='bgp_nodes_peers' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_nodes_peers' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_nodes_peers' && staff_help()){?>class="tip_south"<?}?> ><span>Nodes BGP Peers</span></a></li>
-				<li class="menu_bgp_peers" ><a href="index.php?section=bgp_peers" title="Total BGP Peers List" <? if ($SECTION=='bgp_peers' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_peers' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_peers' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Peers</span></a></li>
 				<li class="menu_bgp_prefixes" ><a href="index.php?section=bgp_prefixes" title="Announced BGP Prefixes List" <? if ($SECTION=='bgp_prefixes' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_prefixes' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_prefixes' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Prefixes</span></a></li>
 				<li class="menu_bgp_prepends" ><a href="index.php?section=bgp_prepends" title="BGP Prepends" <? if ($SECTION=='bgp_prepends' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_prepends' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_prepends' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Prepends</span></a></li>
-				<li class="menu_bgp_illegal_prefixes" ><a href="index.php?section=bgp_illegal_prefixes" title="Wrong Prefix Announcements" <? if ($SECTION=='bgp_illegal_prefixes' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_illegal_prefixes' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_illegal_prefixes' && staff_help()){?>class="tip_south"<?}?> ><span>Bad Announcements</span></a></li>
+				<li class="menu_bgp_peers" ><a href="index.php?section=bgp_peers" title="Total BGP Peers List" <? if ($SECTION=='bgp_peers' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_peers' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_peers' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Peers</span></a></li>
+				<li class="menu_bgp_eventlog"  ><a href="index.php?section=bgp_eventlog" title="Show/Search BGP Routing Events Log" <? if ($SECTION=='bgp_eventlog' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_eventlog' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_eventlog' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Event Log</span></a></li>
+				<li class="menu_bgp_illegal_prefixes" ><a href="index.php?section=bgp_illegal_prefixes" title="Wrong Prefix Announcements" <? if ($SECTION=='bgp_illegal_prefixes' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_illegal_prefixes' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_illegal_prefixes' && staff_help()){?>class="tip_south"<?}?> ><span>Invalid BGP Advertisments</span></a></li>
 				<?if ($CONF['GMAP_ENABLED'] == true){?>
 				<li class="menu_bgp_map" ><a href="index.php?section=bgp_map" title="Live BGP Network Map" <? if ($SECTION=='bgp_map' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_map' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_map' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Live Map</span></a></li>
 				<?}?>
@@ -95,13 +96,12 @@ require("includes/functions.php");
 					<h2 class="sidebar_title">Quick Search</h2>   	        
 
 					<form method="GET" action="index.php">
-						<input type="text" name="nodeid" id="nodeidsearch"  title="Enter Node ID" value="Enter Node ID" size="15" />
+						<input type="text" name="nodeid" id="nodeidsearch"  title="Enter Node ID / AS" value="Enter Node ID / AS" size="17" />
 						<input type="hidden" name="section" value="bgp_nodes_peers" />
 						<button type="submit"  >Show BGP Peers</button>
 					</form>
 					<br />
-					<br />
-
+					
 					<h2 class="sidebar_title">BGP Statistics</h2>
 					<?
 					$SELECT_LINKS = mysql_query("SELECT 1 FROM links WHERE state = 'up' ", $db);

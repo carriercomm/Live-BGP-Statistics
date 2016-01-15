@@ -32,7 +32,7 @@ $mysql_table = 'cclass';
 						<!-- LIST ILLEGAL PREFIXES START -->
 						<fieldset>
 
-							<legend>&raquo; Illegal Prefixes List</legend>
+							<legend>&raquo; Invalid Prefixes List</legend>
 
                         	<div class="monospace">
 								<strong>Colors legend:</strong>
@@ -40,11 +40,11 @@ $mysql_table = 'cclass';
 								<br/>
 								<strong class="green">Green</strong>:&nbsp; The officially assigned prefix(es) to a Node by the <a href="http://<?=$CONF['WIND_DOMAIN'];?>" target="_blank">WiND Database</a>.
 								<br />
-								<strong class="red">Red</strong>:&nbsp;&nbsp;&nbsp; Announced Prefixes not assigned by WiND for that particular Node.
+								<strong class="red">Red</strong>:&nbsp;&nbsp;&nbsp; Advertised Prefixes not assigned by WiND for that particular Node.
 								<br />
 								<strong class="orange">Orange</strong>: The Prefix is assigned to a Node which belongs to the same owner (not technically a problem).
 								<br />
-								<strong class="brown">Brown</strong>:&nbsp; The Prefix is assigned to another Node than the one announcing it (potentially malicious).
+								<strong class="brown">Brown</strong>:&nbsp; The Prefix is assigned to another Node than the one advertising it (potentially malicious).
 								<br />
 								<strong class="blue">Blue</strong>:&nbsp;&nbsp; The Prefix is not assigned to any node, by WiND.
 								<br />
@@ -56,7 +56,7 @@ $mysql_table = 'cclass';
 								<tr>
 									<th>Node ID</th>
 									<th>Assigned Prefixes</th>
-									<th>Illegal Prefixes Advertised</th>
+									<th>Invalid Prefixes Advertised</th>
 									</tr>
 									<!-- RESULTS START -->
 									<?

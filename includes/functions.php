@@ -64,10 +64,13 @@ if (isset($SECTION) && $SECTION == 'bgp_nodes_peers'){
 	$maintitle_title = 'BGP Prepends';
 }elseif (isset($SECTION) && $SECTION == 'bgp_illegal_prefixes'){
 	$maintitle_class = 'maintitle_bgp_illegal_prefixes';
-	$maintitle_title = 'Wrong Prefix Announcements';
+	$maintitle_title = 'Wrong Prefix Advertisments';
 }elseif (isset($SECTION) && $SECTION == 'bgp_map'){
 	$maintitle_class = 'maintitle_bgp_map';
 	$maintitle_title = 'Live BGP Network Map';
+}elseif (isset($SECTION) && $SECTION == 'bgp_eventlog'){
+    $maintitle_class = 'maintitle_bgp_eventlog';
+    $maintitle_title = 'BGP Event Log';
 }else{
 	$maintitle_class = 'maintitle_home';
 	$maintitle_title = 'Dashboard';

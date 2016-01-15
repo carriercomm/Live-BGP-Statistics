@@ -96,7 +96,7 @@ if ($q && $p){
 }elseif ($q){
 	$search_query = "WHERE $mysql_table.Node_id ".$q_op_sql." AND $mysql_table.state LIKE '%$s%'  ";
 }elseif ($p){
-	$search_query = "WHERE $mysql_table.CClass ".$p_op_sql." AND $mysql_table.state LIKE '%$s%'  ";
+	$search_query = "WHERE $mysql_table.CClass != '10.3.41.0/24' AND  $mysql_table.CClass ".$p_op_sql." AND $mysql_table.state LIKE '%$s%'  ";
 }else{
 	$search_query = "WHERE $mysql_table.state LIKE '%$s%'  ";		
 }
@@ -272,6 +272,10 @@ $url_vars = htmlspecialchars($url_vars);
 
 								if ($LISTING['CClass'] == '10.0.0.1/32'){
 									$NODE_CCLASS = "<font color='green'>" . $LISTING['CClass'] . "</font>";													
+								}
+								
+								if ($LISTING['Node_id'] >=$CONF['WIRELESS_COMMUNITY_MAX_ASN']){
+									$NODE_CCLASS = "<font color='grey'>" . $LISTING['CClass'] . "</font>";									
 								}
 
 								
