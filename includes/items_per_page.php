@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *

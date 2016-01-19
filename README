@@ -1,20 +1,25 @@
 Live BGP Statistics
                                          
-This system is complementary to PHP Looking Glass NG. It cannot work on its own.
+This system is complementary to PHP Looking Glass NG (read below for info). It cannot work on its own.
 It's intended to be used for troubleshooting and visualization of Wireless Community Networks using BGP for their backbone routing.
+It assumes that each wireless node is it's own AS (Autonomous System).
 It's not tested on the full internet BGP table. Probably it won't work properly since it's not optimized for such large BGP tables.
 
 It uses the routers database from PHP Looking Glass NG to connect to each router and periodically fetch the whole BGP routing table.
 It then calculates all the BGP Peers for each AS on the network and shows them in easy to interpret representation.
 Currently only Quagga and Mikrotik routers are supported.
 
+Features:
 
-It also lists all the collected data in searchable tables for easier network troubleshooting.
-
-And by consulting the WiND Database it will create a list of illegally announced prefixes on the network.
+-Show each detected AS' BGP Peers in an easy to read list
+-Full BGP Prefixes List with filters by AS Number and Prefix
+-BGP Prepends detection with filters by AS Number
+-Full BGP Peers list with filters by AS Number
+-BGP Event Log with all events (New/Updated/Deleted Peers/Prefixes/Prepends, plus other events) with filters by AS Number and Prefix
+-Invalid Prefix Advertisments list with all the ASes that advertised unssigned or invalid prefixes to the network. This relies heavily on WiND's database to work  
+-Live BGP Map with all the ASes and their peers
 
 Here are some screenshots: https://github.com/Cha0sgr/Live-BGP-Statistics/wiki
-
 
 Requirements:
 

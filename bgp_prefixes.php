@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -91,14 +91,27 @@ if (isset($_GET['search_state'])) {
 	$_GET['search_state'] = 'up';
 }
 
-if ($q && $p){
-	$search_query = "WHERE ( $mysql_table.Node_id ".$q_op_sql." AND $mysql_table.CClass ".$p_op_sql.") AND $mysql_table.state LIKE '%$s%'  ";
-}elseif ($q){
-	$search_query = "WHERE $mysql_table.Node_id ".$q_op_sql." AND $mysql_table.state LIKE '%$s%'  ";
-}elseif ($p){
-	$search_query = "WHERE $mysql_table.CClass != '10.3.41.0/24' AND  $mysql_table.CClass ".$p_op_sql." AND $mysql_table.state LIKE '%$s%'  ";
+//Set ignore filters	
+if (count($CONF['IGNORE_AS_LIST']) > 0){
+	$ignore_ases = " AND `Node_id` NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ";
 }else{
-	$search_query = "WHERE $mysql_table.state LIKE '%$s%'  ";		
+	$ignore_ases = '';										
+}
+if (count($CONF['IGNORE_PREFIX_LIST']) > 0){
+	$ignore_prefixes = " AND `CClass` NOT IN ('".join ("','", $CONF['IGNORE_PREFIX_LIST'])."') ";
+}else{
+	$ignore_prefixes = '';										
+}
+
+if ($q && $p){
+	$search_query = "WHERE ( $mysql_table.Node_id ".$q_op_sql." AND $mysql_table.CClass ".$p_op_sql.") AND $mysql_table.state LIKE '%$s%' " . $ignore_ases . $ignore_prefixes;
+}elseif ($q){
+	$search_query = "WHERE $mysql_table.Node_id ".$q_op_sql." AND $mysql_table.state LIKE '%$s%' " . $ignore_ases;
+}elseif ($p){
+	
+	$search_query = "WHERE $mysql_table.CClass ".$p_op_sql." AND $mysql_table.state LIKE '%$s%' " . $ignore_prefixes;
+}else{
+	$search_query = "WHERE $mysql_table.state LIKE '%$s%' " . $ignore_ases . $ignore_prefixes;		
 }
 
 
@@ -211,8 +224,8 @@ $url_vars = htmlspecialchars($url_vars);
 										<td colspan="2">
 											<select name="search_state" class="select_box">
 												<option value="">Any state</option> 
-												<option value="up"   <? if ($_GET['search_state'] == 'up'){   echo "selected=\"selected\""; }?> >Prefix Announced (Up)</option>
-												<option value="down" <? if ($_GET['search_state'] == 'down'){ echo "selected=\"selected\""; }?> >Prefix Not Announced (Down)</option>
+												<option value="up"   <? if ($_GET['search_state'] == 'up'){   echo "selected=\"selected\""; }?> >Prefix Advertised (Up)</option>
+												<option value="down" <? if ($_GET['search_state'] == 'down'){ echo "selected=\"selected\""; }?> >Prefix Not Advertised (Down)</option>
 											</select>
 										</td>
 
@@ -237,11 +250,11 @@ $url_vars = htmlspecialchars($url_vars);
 
 							<table width="100%" border="0" cellspacing="2" cellpadding="5">
 								<tr>
+									<th><?=create_sort_link("state","Status");?></th>
 									<th><?=create_sort_link("CClass","Prefix");?></th>
 									<th><?=create_sort_link("Node_id","AS Number (NodeID)");?></th>
 									<th><?=create_sort_link("Seenby","Seen by Node");?></th>
 									<th><?=create_sort_link("date","Last Status Change");?></th>
-									<th><?=create_sort_link("state","Prefix Announced");?></th>
 								</tr>
 								<!-- RESULTS START -->
 								<?
@@ -270,7 +283,7 @@ $url_vars = htmlspecialchars($url_vars);
 									$NODE_CCLASS = "<font color='red'>" . $LISTING['CClass'] . "</font>";													
 								}
 
-								if ($LISTING['CClass'] == '10.0.0.1/32'){
+								if (count($CONF['BGP_PREFIX_WHITELIST']) > 0 && in_array($LISTING['CClass'], $CONF['BGP_PREFIX_WHITELIST']) ){
 									$NODE_CCLASS = "<font color='green'>" . $LISTING['CClass'] . "</font>";													
 								}
 								
@@ -281,12 +294,12 @@ $url_vars = htmlspecialchars($url_vars);
 								
 								?>      
 								<tr onmouseover="this.className='on' " onmouseout="this.className='off' " id="tr-<?=$LISTING['id'];?>">
-									<td align="center" nowrap><?=$NODE_CCLASS;?></td>
-									<td align="center" nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['Node_id'];?>" title="Show #<?=$LISTING['Node_id'];?> <?=$NODE1['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['Node_id'];?> <?=$NODE1['Node_name'];?></a></td>
-									<td align="center" nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['Seenby'];?>" title="Show #<?=$LISTING['Seenby'];?>  <?=$NODE2['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['Seenby'];?> <?=$NODE2['Node_name'];?></a></td>
-									<td align="center" nowrap ><?=sec2hms($LISTING['date'], time());?></td>
 									<td align="center" nowrap ><a href="javascript:void(0)" class="<?if (staff_help()){?>tip_south<?}?> <? if ($LISTING['state'] == 'up') { ?>enabled<? } else { ?>disabled<? } ?>" title="Prepend is: <?=strtoupper($LISTING['state']);?>"><span>Prepend is: <?=strtoupper($LISTING['state']);?></span></a></td>
-                            	</tr>
+                            		<td  nowrap><?=$NODE_CCLASS;?></td>
+									<td  nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['Node_id'];?>" title="Show #<?=$LISTING['Node_id'];?> <?=$NODE1['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['Node_id'];?> <?=$NODE1['Node_name'];?></a></td>
+									<td  nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['Seenby'];?>" title="Show #<?=$LISTING['Seenby'];?>  <?=$NODE2['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['Seenby'];?> <?=$NODE2['Node_name'];?></a></td>
+									<td align="center" nowrap ><?=sec2hms($LISTING['date'], time());?></td>
+								</tr>
 								<?}?>
                                 <!-- RESULTS END -->
 							</table>

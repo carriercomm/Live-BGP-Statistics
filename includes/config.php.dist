@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -52,5 +52,9 @@ $CONF['FOOTER_TEXT'] = 'www.stats.awmn - 2008-'.date("Y").'. Developed by <a hre
 $CONF['WIRELESS_COMMUNITY_MAX_ASN'] = '22000'; // Maximum AS Number that's considered part of the wireless community for which this system runs for.
 $CONF['WIRELESS_COMMUNITY_NAME'] = 'AWMN'; // The name of the Wireless Community for which this system runs for.
 $CONF['BGP_COLLECT_MIN_ROUTERS'] = '10'; // Minimum routers live/healthy for BGP Collect daemon to start calculating.
+$CONF['IGNORE_AS_LIST'] = array('1', '232'); // Define a list of AS numbers to ignore in results. Set to: array() to disable.
+$CONF['IGNORE_PREFIX_LIST'] = array('10.1.1.0/24', '10.0.1.0/24'); // Define a list of prefixes to ignore in results. Set to: array to disable.
+$CONF['BGP_INVALID_ADVERTISMENTS_FILTER'] = '24'; // Filter invalid BGP advertisments by prefix length. Valid values 1-32. Set to false to disable.
+$CONF['BGP_PREFIX_WHITELIST'] = array('10.0.0.1/32'); // Define a list of prefixes to consider valid regardless of who advertises them. Set to: array to disable.
 
 ?>

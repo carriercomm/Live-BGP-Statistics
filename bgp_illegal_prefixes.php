@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -48,6 +48,8 @@ $mysql_table = 'cclass';
 								<br />
 								<strong class="blue">Blue</strong>:&nbsp;&nbsp; The Prefix is not assigned to any node, by WiND.
 								<br />
+								<strong class="grey">Grey</strong>:&nbsp;&nbsp; The Prefix is invalidly (&gt;/24) advertised or unknown (&lt;/24) if it should be advertised (*could* cause problems).
+								<br />
 								<br />
 							</div>
 
@@ -60,7 +62,13 @@ $mysql_table = 'cclass';
 									</tr>
 									<!-- RESULTS START -->
 									<?
-									$SELECT_RESULTS  = mysql_query("SELECT `".$mysql_table."`.* FROM `".$mysql_table."` WHERE `state` = 'up' GROUP BY Node_id ",$db);
+									if (count($CONF['IGNORE_AS_LIST']) > 0){
+										$ignore_ases = " AND `Node_id` NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ";
+									}else{
+										$ignore_ases = '';										
+									}
+									
+									$SELECT_RESULTS  = mysql_query("SELECT * FROM `".$mysql_table."` WHERE `state` = 'up' ".$ignore_ases." GROUP BY Node_id ",$db);
 									while($LISTING = mysql_fetch_array($SELECT_RESULTS)){
 
 									$NODEID = $LISTING['Node_id'];
@@ -70,8 +78,21 @@ $mysql_table = 'cclass';
 
 									$NODENAME = $NODE['Node_name'];
 
+									
+									if (count($CONF['IGNORE_PREFIX_LIST']) > 0){
+										$ignore_prefixes = " AND `CClass` NOT IN ('".join ("','", $CONF['IGNORE_PREFIX_LIST'])."') ";
+									}else{
+										$ignore_prefixes = '';										
+									}
+									
+									if (count($CONF['BGP_PREFIX_WHITELIST']) > 0){
+										$ignore_prefixes2 = " AND `CClass` NOT IN ('".join ("','", $CONF['BGP_PREFIX_WHITELIST'])."') ";
+									}else{
+										$ignore_prefixes2 = '';										
+									}
+									
 									$cclasses = array();
-									$SELECT_CCLASSES = mysql_query("SELECT CClass FROM cclass WHERE Node_id = '".$NODEID."' AND state = 'up' ", $db);
+									$SELECT_CCLASSES = mysql_query("SELECT CClass FROM cclass WHERE Node_id = '".$NODEID."' AND state = 'up' " . $ignore_prefixes . $ignore_prefixes2, $db);
 									while ($CCLASSES = mysql_fetch_array($SELECT_CCLASSES)){
 										$cclasses[] = $CCLASSES['CClass'];
 									}
@@ -80,16 +101,23 @@ $mysql_table = 'cclass';
 									$node_classes_expl = explode("\n", $NODE['C-Class']);
 									foreach( $node_classes_expl as $node_classes_part ){
 										if ($node_classes_part){
-											$cclasses2[] = trim($node_classes_part) . "/24";
+											if (!strstr(trim($node_classes_part), "/")){
+												$bitmask = '/24'; 
+											}else{
+												$bitmask = '';
+											}
+											$cclasses2[] = trim($node_classes_part) . $bitmask;
 										}
 									}
 
 									$class = array_diff ($cclasses, $cclasses2);
 
 									//clear non /24 prefixes
-									foreach($class as $key => $one) {
-										if(strpos($one, '/24') != true){
-											unset($class[$key]);
+									if ($CONF['BGP_INVALID_ADVERTISMENTS_FILTER'] > 0 && $CONF['BGP_INVALID_ADVERTISMENTS_FILTER'] < 33){
+										foreach($class as $key => $one) {
+											if(strpos($one, '/'.$CONF['BGP_INVALID_ADVERTISMENTS_FILTER']) != true){
+												unset($class[$key]);
+											}
 										}
 									}
 
@@ -126,7 +154,14 @@ $mysql_table = 'cclass';
 													}
 													$real_class_owner = "<font color='".$color."'>(<a href=\"index.php?section=bgp_nodes_peers&nodeid=".$OWNER['Node_id']."\">#".$OWNER['Node_id']."</a> - ".$OWNER['Node_name']." - ".trim($OWNER['Owner']).")</font>"; 
 												}else{
-													$real_class_owner = "<font color='blue'>(unassigned)</font>";
+													$nodecclass_parts = explode ("/", $nodecclass);
+													if ($nodecclass_parts[1] > 24){
+														$real_class_owner = "<font color='grey'>(invalid)</font>";														
+													}elseif ($nodecclass_parts[1] < 24){
+														$real_class_owner = "<font color='grey'>(unknown)</font>";														
+													}else{													
+														$real_class_owner = "<font color='blue'>(unassigned)</font>";
+													}
 												}
 												echo  "<font color='red'>" . $nodecclass . "</font> ".$real_class_owner."<br>";						
 											}

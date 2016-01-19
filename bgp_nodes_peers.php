@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -239,8 +239,15 @@ if ($NODEID > 0){
 													//$SNODES = Cacher::cache()->get("snodes");
     
 													//if($SNODES === false) {
-	  													
-  														$SELECT_NODES = mysql_query("SELECT Node_id, Node_name, Node_area, `C-Class` AS CClass, Owner FROM nodes INNER JOIN links ON nodes.Node_id = links.node1 OR nodes.Node_id = links.node2 GROUP BY Node_id ORDER BY Node_id ASC", $db);    												
+														
+														//Set ignore filters	
+														if (count($CONF['IGNORE_AS_LIST']) > 0){
+															$ignore_ases = " WHERE `Node_id` NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ";
+														}else{
+															$ignore_ases = '';										
+														}
+															  													
+  														$SELECT_NODES = mysql_query("SELECT Node_id, Node_name, Node_area, `C-Class` AS CClass, Owner FROM nodes INNER JOIN links ON nodes.Node_id = links.node1 OR nodes.Node_id = links.node2 ".$ignore_ases." GROUP BY Node_id ORDER BY Node_id ASC", $db);    												
 														$SNODES = '';
 														while ($SEARCH_NODES = mysql_fetch_array($SELECT_NODES)){
                                                 			$search_cclasses = str_replace ("\n", " ", str_replace ("\r", " ", $SEARCH_NODES['CClass']));
@@ -283,7 +290,7 @@ if ($NODEID > 0){
 								<tr>
 									<td align="center">
 										<?
-										if ($NODEID > 0 && $NODEID != '6076' && $NODEID != '9134'){
+										if ($NODEID > 0 && !in_array($NODEID, $CONF['IGNORE_AS_LIST']) ){
 
                         					if ($NODE['CClass'] ==''){
 												$NODE['CClass'] = '<font color=\'red\'>--</font>';
@@ -317,7 +324,7 @@ if ($NODEID > 0){
 													$NODE_CCLASS = "<font color='red'>" . $CCLASSES['CClass'] . "</font>";													
 												}
 												
-												if ($CCLASSES['CClass'] == '10.0.0.1/32'){
+												if (count($CONF['BGP_PREFIX_WHITELIST']) > 0 && in_array($CCLASSES['CClass'], $CONF['BGP_PREFIX_WHITELIST']) ){
 													$NODE_CCLASS = "<font color='green'>" . $CCLASSES['CClass'] . "</font>";													
 												}
 
@@ -346,7 +353,7 @@ if ($NODEID > 0){
 												<td colspan="2" align="center" bgcolor="#E4E9E9" class="title"><?=$node_router_link_start;?>#<?=$NODEID;?><?if ($NODE['Node_name'] != ''){?> - <?=$NODE['Node_name'];?><?}?><?=$node_router_link_end;?> <?if ($NODE['Node_area'] != ''){?><span class="small">(<?=$NODE['Node_area'];?>)</span><?}?></td>
 											</tr>
 											<tr>
-												<td colspan="2" bgcolor="#F7F9F9" ><span class="subtitle"><font color="orange">Node Administrator:</font> <a href="http://<?=$CONF['WIND_DOMAIN'];?>/?page=nodes&node=<?=$NODEID;?>&subpage=contact" title="Contact Node administrator via WiND" target="_blank"><?=$NODE['Owner'];?></a></span></td>
+												<td colspan="2" bgcolor="#F7F9F9" ><span class="subtitle"><font color="orange">Node/AS Administrator:</font> <a href="http://<?=$CONF['WIND_DOMAIN'];?>/?page=nodes&node=<?=$NODEID;?>&subpage=contact" title="Contact Node administrator via WiND" target="_blank"><?=$NODE['Owner'];?></a></span></td>
 					  						</tr>
 											<tr>
 												<td colspan="2" bgcolor="#F7F9F9" ><span class="subtitle"><font color="green">Assigned Prefixes (based on WiND):<br><?=$NODE['CClass'];?></font></span></td>
@@ -361,15 +368,15 @@ if ($NODEID > 0){
 											</tr>
 											<?}else{?>
 											<tr>
-												<td colspan="2" bgcolor="#F7F9F9" ><span class="subtitle"><font color="blue">Announced Prefixes:</font><br>
+												<td colspan="2" bgcolor="#F7F9F9" ><span class="subtitle"><font color="blue">Advertised Prefixes:</font><br>
 												<?=nl2br($CCLASSES);?></span></td>
 											</tr>
 											<tr>
-												<td colspan="2" bgcolor="#F7F9F9"><span class="subtitle"><font color="brown">Node Peers:</font></span></td>
+												<td colspan="2" bgcolor="#F7F9F9"><span class="subtitle"><font color="brown">Node/AS Detected BGP Peers:</font></span></td>
 											</tr>
 											<?
 											$NODES = FALSE;
-
+											
                         					$i = 0;
 											while ($NODE1 = mysql_fetch_array($SELECT_NODE1)){
 												$SELECT_NODE_NAME1 = mysql_query ("SELECT Node_name, Node_area, `C-Class` AS CClass FROM nodes WHERE Node_id = '".intval($NODE1['node2'])."' ", $db);
@@ -405,7 +412,7 @@ if ($NODEID > 0){
 												//  echo "-->";
 												$o=0;				
 												for ($i = 0; $i <= count($NODES); $i++) {
-													if ($NODES[$i] && $NODES[$i] != '6076' && $NODES[$i] != '9134'){
+													if ($NODES[$i]  && !in_array($NODES[$i], $CONF['IGNORE_AS_LIST'])){
 														$o++;
 											?>
 											<tr>

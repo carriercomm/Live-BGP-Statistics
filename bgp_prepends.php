@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -31,19 +31,37 @@ $action_title = "All BGP Prepends";
   
 $search_vars = "";
 
-$q = mysql_real_escape_string($_GET['q'], $db);
+$q = mysql_real_escape_string(trim($_GET['q']), $db);
+$q_op = mysql_real_escape_string(trim($_GET['q_operator']), $db);
 if ($q) {
-	if (strstr($q,"!")){
-		$not_qsql = '!';
-		$not_qsql_cond = ' AND ';
-		$q_sql = str_replace("!", "", $q);
+
+	if ($q_op == 'is'){
+		$q_op_sql = "= '" . $q . "' "; 	
+		$q_op_cond = ' OR '; 	
+	}elseif ($q_op == 'isnot'){
+		$q_op_sql = "!= '" . $q . "' "; 	
+		$q_op_cond = ' AND '; 	
+	}elseif ($q_op == 'contains'){
+		$q_op_sql = " LIKE '%" . $q . "%' "; 	
+		$q_op_cond = ' OR '; 	
+	}elseif ($q_op == 'containsnot'){
+		$q_op_sql = "NOT LIKE '%" . $q . "%' ";
+		$q_op_cond = ' AND '; 	
+	}elseif ($q_op == 'ge'){
+		$q_op_sql = "> '" . $q . "' "; 	
+		$q_op_cond = ' AND '; 	
+	}elseif ($q_op == 'le'){
+		$q_op_sql = "< '" . $q . "' "; 	
+		$q_op_cond = ' AND '; 	
 	}else{
-		$not_qsql_cond = ' OR ';				
-		$q_sql = $q;
-	} 
-	$search_vars .= "&q=$q"; 
+		$q_op_sql = "= '" . $q . "' ";	
+		$q_op_cond = ' OR '; 	
+	}
+	
+	$search_vars .= "&q=$q&q_operator=$q_op"; 
 	$action_title = "Search: " . $q;
 }
+
 
 if (isset($_GET['search_state'])) { 
 	$s = mysql_real_escape_string($_GET['search_state'], $db);
@@ -53,10 +71,17 @@ if (isset($_GET['search_state'])) {
 	$_GET['search_state'] = 'up';		
 }
 
-if ($q){
-	$search_query = "WHERE $mysql_table.nodeid != '6076' AND ( $mysql_table.nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' AND $mysql_table.parent_nodeid <= '".$CONF['WIRELESS_COMMUNITY_MAX_ASN']."' ) AND ( $mysql_table.nodeid ".$not_qsql."= '$q_sql' ".$not_qsql_cond." $mysql_table.parent_nodeid ".$not_qsql."= '$q_sql') AND $mysql_table.state LIKE '%$s%' ";
+//Set ignore filters	
+if (count($CONF['IGNORE_AS_LIST']) > 0){
+	$ignore_ases = " AND (`nodeid` NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") AND parent_nodeid NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ) ";
 }else{
-	$search_query = "WHERE $mysql_table.nodeid != '6076' AND ( $mysql_table.nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." AND $mysql_table.parent_nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." ) AND $mysql_table.state LIKE '%$s%' ";
+	$ignore_ases = '';										
+}
+
+if ($q){
+	$search_query = "WHERE ($mysql_table.nodeid ".$q_op_sql." ".$q_op_cond." $mysql_table.parent_nodeid ".$q_op_sql." ) AND $mysql_table.state LIKE '%$s%' " . $ignore_ases;
+}else{
+	$search_query = "WHERE $mysql_table.state LIKE '%$s%' " . $ignore_ases;
 }
 
 
@@ -116,7 +141,6 @@ for($i=0;$i<$pages;$i++){
 $total_pages=$i; // sinolo selidon
 
 //Final Query for records listing
-//echo "SELECT `".$mysql_table."`.* FROM `".$mysql_table."` ".$search_query." ".$order." LIMIT ".$pageno.", ".$e ;
 $SELECT_RESULTS  = mysql_query("SELECT `".$mysql_table."`.* FROM `".$mysql_table."` ".$search_query." ".$order." LIMIT ".$pageno.", ".$e ,$db);
 $url_vars = "action=".$_GET['action'] . $sort_vars . $search_vars;
 
@@ -138,15 +162,24 @@ $url_vars = htmlspecialchars($url_vars);
 								<input type="hidden" name="section" value="<?=$SECTION;?>" />
 								<table border="0" cellspacing="0" cellpadding="4">
 									<tr>
-										<td>AS Number Filter:</td>
-										<td><input type="text" name="q" id="search_field_q" class="input_field" value="<?=$q?>" /></td>
-
-										<td>Prepend State:</td>
+										<td>AS Number:</td>
+									<td>
+										<select name="q_operator" class="select_box">
+											<option value="is"   <? if ($_GET['q_operator'] == 'is'){   echo "selected=\"selected\""; }?> >Is</option>
+											<option value="isnot"   <? if ($_GET['q_operator'] == 'isnot'){   echo "selected=\"selected\""; }?> >Is not</option>
+											<option value="ge" <? if ($_GET['q_operator'] == 'ge'){ echo "selected=\"selected\""; }?> >Is Greater than</option>
+											<option value="le" <? if ($_GET['q_operator'] == 'le'){ echo "selected=\"selected\""; }?> >Is Less than</option>
+											<option value="contains" <? if ($_GET['q_operator'] == 'contains'){ echo "selected=\"selected\""; }?> >Contains</option>
+											<option value="containsnot" <? if ($_GET['q_operator'] == 'containsnot'){ echo "selected=\"selected\""; }?> >Does not contain</option>
+										</select>
+									</td>
+									<td><input type="text" name="q" id="search_field_q" class="input_field" value="<?=$q?>" style="width: 60px;"/></td>
+									<td>Prepend State:</td>
 										<td>
 											<select name="search_state" class="select_box">
 												<option value="">Any state</option> 
-												<option value="up"   <? if ($_GET['search_state'] == 'up'){   echo "selected=\"selected\""; }?> >Prepend Announced (Up)</option>
-												<option value="down" <? if ($_GET['search_state'] == 'down'){ echo "selected=\"selected\""; }?> >Prepend Not Announced (Down)</option>
+												<option value="up"   <? if ($_GET['search_state'] == 'up'){   echo "selected=\"selected\""; }?> >Prepend Active</option>
+												<option value="down" <? if ($_GET['search_state'] == 'down'){ echo "selected=\"selected\""; }?> >Prepend Inactive</option>
 											</select>
 										</td>                                
 
@@ -171,10 +204,10 @@ $url_vars = htmlspecialchars($url_vars);
                             
 							<table width="100%" border="0" cellspacing="2" cellpadding="5">
 								<tr>
+									<th width="120"><?=create_sort_link("state","Prepend Active");?></th>
 									<th><?=create_sort_link("parent_nodeid","Parent Node");?></th>
-									<th><?=create_sort_link("nodeid","Prepend with Node");?></th>
+									<th><?=create_sort_link("nodeid","Prepended Node");?></th>
 									<th><?=create_sort_link("date","Last Status Change");?></th>
-									<th><?=create_sort_link("state","Prepend Active");?></th>
 								</tr>
 								<!-- RESULTS START -->
 								<?
@@ -188,10 +221,10 @@ $url_vars = htmlspecialchars($url_vars);
 								$NODE2 = mysql_fetch_array($SELECT_NODE2);
                         		?>      
 								<tr onmouseover="this.className='on' " onmouseout="this.className='off' " id="tr-<?=$LISTING['id'];?>">
+									<td align="center" nowrap ><a href="javascript:void(0)" class="<?if (staff_help()){?>tip_south<?}?> <? if ($LISTING['state'] == 'up') { ?>enabled<? } else { ?>disabled<? } ?>" title="Prepend is: <?=strtoupper($LISTING['state']);?>"><span>Prepend is: <?=strtoupper($LISTING['state']);?></span></a></td>
 									<td nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['parent_nodeid'];?>" title="Show #<?=$LISTING['parent_nodeid'];?> <?=$NODE1['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['parent_nodeid'];?> <?=$NODE1['Node_name'];?></a></td>
 									<td nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['nodeid'];?>" title="Show #<?=$LISTING['nodeid'];?>  <?=$NODE2['Node_name'];?>Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['nodeid'];?> <?=$NODE2['Node_name'];?></a></td>
 									<td align="center" nowrap ><?=sec2hms($LISTING['date'], time());?></td>
-									<td align="center" nowrap ><a href="javascript:void(0)" class="<?if (staff_help()){?>tip_south<?}?> <? if ($LISTING['state'] == 'up') { ?>enabled<? } else { ?>disabled<? } ?>" title="Prepend is: <?=strtoupper($LISTING['state']);?>"><span>Prepend is: <?=strtoupper($LISTING['state']);?></span></a></td>
 								</tr>
 								<?}?>
                                 <!-- RESULTS END -->

@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -70,7 +70,7 @@ require("includes/functions.php");
 				<li class="menu_bgp_prepends" ><a href="index.php?section=bgp_prepends" title="BGP Prepends" <? if ($SECTION=='bgp_prepends' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_prepends' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_prepends' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Prepends</span></a></li>
 				<li class="menu_bgp_peers" ><a href="index.php?section=bgp_peers" title="Total BGP Peers List" <? if ($SECTION=='bgp_peers' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_peers' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_peers' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Peers</span></a></li>
 				<li class="menu_bgp_eventlog"  ><a href="index.php?section=bgp_eventlog" title="Show/Search BGP Routing Events Log" <? if ($SECTION=='bgp_eventlog' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_eventlog' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_eventlog' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Event Log</span></a></li>
-				<li class="menu_bgp_illegal_prefixes" ><a href="index.php?section=bgp_illegal_prefixes" title="Wrong Prefix Announcements" <? if ($SECTION=='bgp_illegal_prefixes' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_illegal_prefixes' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_illegal_prefixes' && staff_help()){?>class="tip_south"<?}?> ><span>Invalid BGP Advertisments</span></a></li>
+				<li class="menu_bgp_illegal_prefixes" ><a href="index.php?section=bgp_illegal_prefixes" title="Invalid Prefix Advertisments on BGP" <? if ($SECTION=='bgp_illegal_prefixes' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_illegal_prefixes' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_illegal_prefixes' && staff_help()){?>class="tip_south"<?}?> ><span>Invalid Prefix Advertisments</span></a></li>
 				<?if ($CONF['GMAP_ENABLED'] == true){?>
 				<li class="menu_bgp_map" ><a href="index.php?section=bgp_map" title="Live BGP Network Map" <? if ($SECTION=='bgp_map' && staff_help() ){?>class="tip_south selected"<?}elseif($SECTION=='bgp_map' && !staff_help() ){?>class="selected"<?}elseif($SECTION!='bgp_map' && staff_help()){?>class="tip_south"<?}?> ><span>BGP Live Map</span></a></li>
 				<?}?>
@@ -102,28 +102,37 @@ require("includes/functions.php");
 					</form>
 					<br />
 					
-					<h2 class="sidebar_title">BGP Statistics</h2>
+					<h2 class="sidebar_title">BGP Statistics<?if ($CONF['WIRELESS_COMMUNITY_NAME']){ echo " for ". $CONF['WIRELESS_COMMUNITY_NAME'];}?></h2>
 					<?
-					$SELECT_LINKS = mysql_query("SELECT 1 FROM links WHERE state = 'up' ", $db);
+					//Set AS ignore filters	
+					if (count($CONF['IGNORE_AS_LIST']) > 0){
+						$ignore_ases_links  = " AND `node1` NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ";
+						$ignore_ases_links2 = " AND `node2` NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ";
+					}else{
+						$ignore_ases_links  = '';										
+						$ignore_ases_links2 = '';										
+					}					
+					
+					$SELECT_LINKS = mysql_query("SELECT 1 FROM links WHERE state = 'up'  " . $ignore_ases_links . $ignore_ases_links2, $db);
 					$LINKS = mysql_num_rows($SELECT_LINKS);
 
 					$LINKS_DOWN = array();
-					$SELECT_LINKS_DOWN1 = mysql_query("SELECT node1 FROM links WHERE state = 'down' ", $db);
+					$SELECT_LINKS_DOWN1 = mysql_query("SELECT node1 FROM links WHERE state = 'down' " . $ignore_ases_links, $db);
 					while ($LINKS_DOWN1 = mysql_fetch_array($SELECT_LINKS_DOWN1)){
 						$LINKS_DOWN[] = $LINKS_DOWN1['node1'];
 					}
-					$SELECT_LINKS_DOWN2 = mysql_query("SELECT node2 FROM links WHERE state = 'down' ", $db);
+					$SELECT_LINKS_DOWN2 = mysql_query("SELECT node2 FROM links WHERE state = 'down' " . $ignore_ases_links2, $db);
 					while ($LINKS_DOWN2 = mysql_fetch_array($SELECT_LINKS_DOWN2)){
 						$LINKS_DOWN[] = $LINKS_DOWN2['node2'];
 					}
 					$LINKS_DOWN = array_unique($LINKS_DOWN);
 
 					$NODES = array();
-					$SELECT_NODES1 = mysql_query("SELECT node1 FROM links WHERE state = 'up' ", $db);
+					$SELECT_NODES1 = mysql_query("SELECT node1 FROM links WHERE state = 'up' " . $ignore_ases_links, $db);
 					while ($NODES1 = mysql_fetch_array($SELECT_NODES1)){
 						$NODES[] = $NODES1['node1'];
 					}
-					$SELECT_NODES2 = mysql_query("SELECT node2 FROM links WHERE state = 'up' ", $db);
+					$SELECT_NODES2 = mysql_query("SELECT node2 FROM links WHERE state = 'up' " . $ignore_ases_links2, $db);
 					while ($NODES2 = mysql_fetch_array($SELECT_NODES2)){
 						$NODES[] = $NODES2['node2'];
 					}
@@ -139,16 +148,32 @@ require("includes/functions.php");
 					$SELECT_ROUTERS_ALL = mysql_query("SELECT 1 FROM routers_db.routers ", $db2);
 					$ROUTERS_ALL = mysql_num_rows($SELECT_ROUTERS_ALL);
 
-					$SELECT_CLASS = mysql_query("SELECT DISTINCT(CClass)  FROM cclass WHERE state='up' ", $db);
+					//Set prefix ignore filters
+					if (count($CONF['IGNORE_PREFIX_LIST']) > 0){
+						$ignore_prefixes  = " AND `CClass` NOT IN ('".join ("','", $CONF['IGNORE_PREFIX_LIST'])."') ";
+						$ignore_prefixes2 = " WHERE`CClass` NOT IN ('".join ("','", $CONF['IGNORE_PREFIX_LIST'])."') ";
+					}else{
+						$ignore_prefixes  = '';										
+						$ignore_prefixes2 = '';										
+					}
+					
+					$SELECT_CLASS = mysql_query("SELECT DISTINCT(CClass)  FROM cclass WHERE state='up' " . $ignore_prefixes, $db);
 					$CLASS = mysql_num_rows($SELECT_CLASS);
 
-					$SELECT_CLASS_ALL = mysql_query("SELECT CClass FROM cclass WHERE 1", $db);
+					$SELECT_CLASS_ALL = mysql_query("SELECT CClass FROM cclass " . $ignore_prefixes2, $db);
 					$CLASS_ALL = mysql_num_rows($SELECT_CLASS_ALL);
 
-					$SELECT_PREPENDS = mysql_query("SELECT 1 FROM prepends WHERE ( nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." AND parent_nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." ) AND state='up' ", $db);
+					//Set AS ignore filters	
+					if (count($CONF['IGNORE_AS_LIST']) > 0){
+						$ignore_ases_prepends  = " AND `nodeid` NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") AND `parent_nodeid` NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ";
+					}else{
+						$ignore_ases_prepends  = '';										
+					}					
+					
+					$SELECT_PREPENDS = mysql_query("SELECT 1 FROM prepends WHERE ( nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." AND parent_nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." ) AND state='up' " . $ignore_ases_prepends, $db);
 					$PREPENDS = mysql_num_rows($SELECT_PREPENDS);
 
-					$SELECT_PREPENDS_ALL = mysql_query("SELECT 1 FROM prepends WHERE nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." AND parent_nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." ", $db);
+					$SELECT_PREPENDS_ALL = mysql_query("SELECT 1 FROM prepends WHERE nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']." AND parent_nodeid <= ".$CONF['WIRELESS_COMMUNITY_MAX_ASN']. $ignore_ases_prepends, $db);
 					$PREPENDS_ALL = mysql_num_rows($SELECT_PREPENDS_ALL);
 					?>
 

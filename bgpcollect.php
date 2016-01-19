@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -25,21 +25,20 @@ require("includes/config.php");
 require("includes/functions.php");
 require("includes/functions_bgpcollect.php");
 
+//Include Quagga Telnet Class
+include("includes/quagga_telnet.php");
+
 //Include SSH Libs for mikrotik
 include('Net/SSH2.php');
 
 
-//Fill Nodes Table with Node ID + Node Name from WiND
-//include("/var/www/html/links/xml2array.php");
-
-//eventlog("Started BGP Collect daemon");
 eventlog('DAEMONSTART');
 
 // Run on endless loop
 while (1){
 
 	// BEGIN GATHERING DATA FROM ROUTERS
-    $SELECT_ROUTERS = mysql_query("SELECT NodeName, RouterName, NodeID, Ip, Type, Pass, User, Port FROM `routers_db`.`routers` WHERE Status = 'up' AND Active = '1' AND Stats = '1' ORDER BY id ASC", $db2);
+    $SELECT_ROUTERS = mysql_query("SELECT NodeName, RouterName, NodeID, Ip, Type, Pass, User, Port FROM `".$CONF['db2']."`.`routers` WHERE Status = 'up' AND Active = '1' AND Stats = '1' ORDER BY id ASC", $db2);
 	$ROUTERS_TOTAL = mysql_num_rows($SELECT_ROUTERS);
 	$RO = 0;
 
@@ -54,6 +53,8 @@ while (1){
 		while ($ROUTERS = mysql_fetch_array($SELECT_ROUTERS)){
 
 			$RO++;
+			$SKIPPED = false;
+						
 			echo  "\n\n" . logtime() . " [ROUTER ".$RO."/".$ROUTERS_TOTAL."] ->Reading BGP Table from router #" . $ROUTERS['NodeID'] . " ". $ROUTERS['NodeName'] . " - ".$ROUTERS['RouterName'] ." Type: ".$ROUTERS['Type'] . " (".$ROUTERS['Ip'].":".$ROUTERS['Port'] .")\n";
 
 			//$router["title"]    = $ROUTERS['RouterName'];
@@ -63,33 +64,43 @@ while (1){
 			$router["port"] 	= $ROUTERS['Port'];
 			$router["user"] 	= $ROUTERS['User'];
 
+			/*
 			echo logtime() . " [BGP] -> Reading ROUTER ASN from " . $ROUTERS['RouterName'] . " (".$ROUTERS['Ip'].")...\n";
 			if ($ROUTERS['Type'] == 'mikrotik'){
 				$ROUTERAS = routerAS_from_ip($router, true);
 			}else{
 				$ROUTERAS = routerAS_from_ip($router, false);			
 			}
-			if ($ROUTERAS){
-				echo logtime() ." [BGP] -> Got ". $ROUTERAS ."!\n";
+			$ROUTERAS = (int)$ROUTERAS;
+			if ($ROUTERAS > 0){
+				echo logtime() ." [BGP] -> Got #". $ROUTERAS ."\n";
 			}else{
-				echo "NOT OK :-(\n";
-				
+				echo logtime() ." [BGP] -> !!! Could NOT get ASN !!!\n";
+				eventlog ('ROUTERSKIP', false, false, false, $router["address"], false, "Could not get Router ASN");
+				mysql_query("UPDATE `".$CONF['db2']."`.`routers` SET `Status` = 'down' WHERE `Ip` = '".$ROUTERS['Ip']."' ", $db2);
+				$SKIPPED = true;
 			}
 
 			// Wait before reconnecting			
-			sleep(1);
+			//sleep(1);
 			//GET BGP TABLE FROM ROUTER
-			if ($ROUTERAS){                 
+			*/
+			$ROUTERAS = $ROUTERS['NodeID'];
+			
+			if ($ROUTERAS > 0){                 
 				echo logtime() . " [BGP] -> Reading BGP Routing Table from #" . $ROUTERAS . "...\n";
 				$BGPLINES = bgppaths2array($router);
 				if ($BGPLINES){
-					echo logtime() ." [BGP] -> BGPLINES RECEIVED IS OK!\n";
+					echo logtime() ." [BGP] -> Received BGP Routing Table\n";
+					mysql_query("INSERT INTO  `".$CONF['db2']."`.`bgp_history` (`router_iplong`, `bgptable` ) VALUES (".ip2long($ROUTERS['Ip']).", '".implode("\n", $BGPLINES)."') ", $db2);
 				}else{
-					echo logtime() ." [BGP] -> BGPLINES RECEIVED IS NOT OK :-(\n";
-					//eventlog("SKIPPED Router #" . $ROUTERS['NodeID'] . " ". $ROUTERS['NodeName'] . " - ".$ROUTERS['RouterName'] ." Type: ".$ROUTERS['Type'] . " (".$ROUTERS['Ip'].":".$ROUTERS['Port'] ."). Could not read BGP Routing Table");
-					eventlog ('ROUTERSKIP', false, false, false, $router["address"], false, "Could not read BGP Routing Table");
+					echo logtime() ." [BGP] -> !!! Could NOT read BGP Routing Table !!!\n";
+					if ($SKIPPED == false){
+						eventlog ('ROUTERSKIP', false, false, false, $router["address"], false, "Could not read BGP Routing Table");
+						mysql_query("UPDATE `".$CONF['db2']."`.`routers` SET `Status` = 'down' WHERE `Ip` = '".$ROUTERS['Ip']."' ", $db2);
+					}
 				}
-				echo logtime() . " [BGP] -> Got Data, going to processing...\n";
+				echo logtime() . " [BGP] -> Processing BGP Routing Table...\n";
 				//print_r ($BGPLINES);
 
 				$m = 0;
@@ -114,7 +125,7 @@ while (1){
 						//$wpos = strpos($buffer,'Weight');
 						$ppos = strpos($buffer,'Path');
 					}
-
+					
 					if ($buffer[0]=='*') {
 						$NextHop = trim(substr($buffer, $hpos, $mpos-$hpos));
 						if (($NextHop=='0.0.0.0')||($NextHop=='')) {}else{
@@ -131,70 +142,86 @@ while (1){
 
 			}else{
 				echo logtime() . " [ROUTER] -> Router looks down. Skipping...\n";
-				//eventlog("SKIPPED Router #" . $ROUTERS['NodeID'] . " ". $ROUTERS['NodeName'] . " - ".$ROUTERS['RouterName'] ." Type: ".$ROUTERS['Type'] . " (".$ROUTERS['Ip'].":".$ROUTERS['Port'] ."). Looks down.");
-				eventlog ('ROUTERSKIP', false, false, false, $router["address"], false, "Router Looks Down");		
+				if ($SKIPPED == false){
+					eventlog ('ROUTERSKIP', false, false, false, $router["address"], false, "Router Looks Down");
+					mysql_query("UPDATE `".$CONF['db2']."`.`routers` SET `Status` = 'down' WHERE `Ip` = '".$ROUTERS['Ip']."' ", $db2);
+				}		
 			}
 
-			// PROCESS GATHERED DATA FROM ROUTER 
-			for ( $i=0; $i< count ($data); $i++ )  {
-				//echo $data[$i]['pathstr'] . "\n\n";
+			//var_dump($data);
+			if ($data){
+				
+				// PROCESS GATHERED DATA FROM ROUTER 
+				for ( $i=0; $i< count ($data); $i++ )  {
+					//echo $data[$i]['pathstr'] . "\n\n";
+	                
+					$ases = explode (" ", $data[$i]['pathstr'] );
+				    $PREFIX_ASES = count($ases);
+					
+					//Add network prefix to DB
+					if ($PREFIX_ASES > 1){
+						$NETWORK_AS = as_announcer_from_as_path($data[$i]['pathstr'], $ROUTERAS);
+						if ($data[$i]['prefix'] && $NETWORK_AS ){
+							ad2dbcclass ($NETWORK_AS, $data[$i]['prefix'], $ROUTERAS, TRUE);
+							ad2tempdbcclass ($NETWORK_AS, $data[$i]['prefix']);
+						}
+					}
 
-				$ases = explode (" ", $data[$i]['pathstr'] );
+					$CONFED = FALSE;
 
-				//Add network prefix to DB
-				$NETWORK_AS = as_announcer_from_as_path($data[$i]['pathstr'], $ROUTERAS);
-				if ($data[$i]['prefix'] && $NETWORK_AS ){
-					ad2dbcclass ($NETWORK_AS, $data[$i]['prefix'], $ROUTERAS, TRUE);
-					ad2tempdbcclass ($NETWORK_AS, $data[$i]['prefix']);
-				}
+					for ( $e=0; $e<$PREFIX_ASES; $e++ )  {
 
-				$CONFED = FALSE;
-
-				$PREFIX_ASES = count($ases);
-				for ( $e=0; $e< $PREFIX_ASES; $e++ )  {
-
-					$ep1 = $e + 1;
-					$em1 = $e - 1;
-
-					if ($PREFIX_ASES <= 50){
-						if (( $ases[$e] != 'i' && $ases[$e] != 'e' && $ases[$e] != '?' && $ases[$e] != '' ) ){
-
-							//DETECT 1 HOP LINKS FIRST
-							if ( ($ases[$ep1]  == 'i'  || $ases[$ep1] == 'e' || $ases[$ep1] == '?' ) && ( $ases[$em1] == '' || $ases[$em1] == '0' ) ){
-
-								$CONFED = detect_confed($ases[$e], 'start', FALSE);
-								if ($CONFED == FALSE){
-									add2db($ROUTERAS, $ases[$e], TRUE);
-									add2tempdb($ROUTERAS, $ases[$e], TRUE);
-								}else{
-									//echo  logtime() . " ---> IN CONFED - Ignoring AS ".$ases[$e]."\n";
-								}
-								$CONFED = detect_confed($ases[$e], 'end', FALSE);
-
-							//DETECT THE REST OF THE LINKS
-							}elseif ($ases[$ep1]  != '') {
-
-								$CONFED = detect_confed($ases[$e], 'start', FALSE);
-								if ($CONFED == FALSE){
-									$IS_PREPEND = FALSE;
-									$PREPEND_CHECK = detect_prepends($e, $ep1, $ases, FALSE, FALSE, $ROUTERAS);
-									if ($PREPEND_CHECK === 'NOPREPEND' ){
-										if ( ( $ases[$e] == 'i' || $ases[$e] == 'e' || $ases[$e] == '' || $ases[$e] == '?'  || $ases[$e] == '0' ) || ( $ases[$ep1] == 'i' || $ases[$ep1] == 'e' || $ases[$ep1] == '' || $ases[$ep1] == '?' || $ases[$ep1] == '0' ) ){}else{
-											add2db($ases[$e], $ases[$ep1], $ROUTERAS, TRUE);
-											add2tempdb($ases[$e], $ases[$ep1], TRUE);
-										}
+						$ep1 = $e + 1;
+						$em1 = $e - 1;
+                        
+                        if ($PREFIX_ASES <= 50){
+							if (( $ases[$e] != 'i' && $ases[$e] != 'e' && $ases[$e] != '?' && $ases[$e] != '' ) ){
+		                    
+								//DETECT 1 HOP LINKS FIRST
+								if ( ($ases[$ep1]  == 'i'  || $ases[$ep1] == 'e' || $ases[$ep1] == '?' ) && ( $ases[$em1] == '' || $ases[$em1] == '0' ) ){
+		                            
+									$CONFED = detect_confed($ases[$e], 'start', FALSE);
+									if ($CONFED == FALSE){
+                                        add2db($ROUTERAS, $ases[$e], $ROUTERAS, TRUE);
+										add2tempdb($ROUTERAS, $ases[$e], TRUE);
+									}else{
+										//echo  logtime() . " ---> IN CONFED - Ignoring AS ".$ases[$e]."\n";
 									}
-								}else{
-									//echo  logtime() . " ---> IN CONFED - Ignoring AS ".$ases[$e]."\n";
-								}
-								$CONFED = detect_confed($ases[$e], 'end', FALSE);
+									$CONFED = detect_confed($ases[$e], 'end', FALSE);
 
+								//DETECT THE REST OF THE LINKS
+								}elseif ($ases[$ep1]  != '') {
+
+									$CONFED = detect_confed($ases[$e], 'start', FALSE);
+									if ($CONFED == FALSE){
+										$IS_PREPEND = FALSE;
+										$PREPEND_CHECK = detect_prepends($e, $ep1, $ases, FALSE, FALSE, $ROUTERAS);
+										if ($PREPEND_CHECK == 'NOPREPEND' ){
+											if ( ( $ases[$e] == 'i' || $ases[$e] == 'e' || $ases[$e] == '' || $ases[$e] == '?'  || $ases[$e] == '0' ) || ( $ases[$ep1] == 'i' || $ases[$ep1] == 'e' || $ases[$ep1] == '' || $ases[$ep1] == '?' || $ases[$ep1] == '0' ) ){}else{
+												add2db($ases[$e], $ases[$ep1], $ROUTERAS, TRUE);
+												add2tempdb($ases[$e], $ases[$ep1], TRUE);
+											}
+										}
+									}else{
+										//echo  logtime() . " ---> IN CONFED - Ignoring AS ".$ases[$e]."\n";
+									}
+									$CONFED = detect_confed($ases[$e], 'end', FALSE);
+
+								}
 							}
 						}
 					}
+				
 				}
-			}
+				
+				echo logtime() . " [BGP] -> BGP Routing Table processed OK. Going to next router...\n";
+				
 
+			}else{
+				//echo  logtime() . " FATAL ERROR! ".'Empty $data[$i][\'pathstr\']' . " .\n";
+				//eventlog('FATALERROR', false, false, false, false, false, 'Empty $data[$i][pathstr]');
+			}	
+		
 			//reset vars just in case :P
 			$data     = FALSE;
 			$BGPLINES = FALSE;
@@ -214,7 +241,6 @@ while (1){
 			while ($DAT = mysql_fetch_array($SELECT)){
 				$IDs[$t] =  $DAT['id'];
 				echo  logtime() . " ---> Link ".$DAT['node1'] . "-" . $DAT['node2']." is set to be disabled.\n";
-				//eventlog("LINK ".$DAT['node1'] . "-" . $DAT['node2']." is DOWN.");
 				eventlog ('LINKDOWN', $DAT['node1'], $DAT['node2']);
 				$t++;
 			}
@@ -233,7 +259,6 @@ while (1){
 			while ($DAT = mysql_fetch_array($SELECT)){
 				$IDs[$t] =  $DAT['id'];
 				echo  logtime() . " ---> C-Class ".$DAT['CClass'] . " from #" . $DAT['Node_id']." is set to be disabled.\n";
-				//eventlog("C-CLASS ".$DAT['CClass'] . " from #" . $DAT['Node_id']." is DOWN.");
 				eventlog ('PREFIXDOWN', $DAT['Node_id'], false, false, false, $DAT['CClass']);
 				$t++;
 			}
@@ -252,8 +277,7 @@ while (1){
 			while ($DAT = mysql_fetch_array($SELECT)){
 				$IDs[$t] =  $DAT['id'];
 				echo  logtime() . " ---> PREPEND ".$DAT['nodeid'] . " - " . $DAT['parent_nodeid']." is set to be disabled.\n";
-				//eventlog("PREPEND ".$DAT['nodeid'] . " - " . $DAT['parent_nodeid']." is DOWN.");
-				eventlog ('PREPENDDOWN', $DAT['Node_id'], $DAT['parent_nodeid']);
+				eventlog ('PREPENDDOWN', $DAT['nodeid'], $DAT['parent_nodeid']);
 				$t++;
 			}
 			mysql_query("UPDATE prepends SET state = 'down', `date` = UNIX_TIMESTAMP ( ) WHERE id IN (".join (",", $IDs).")", $db);
@@ -263,7 +287,6 @@ while (1){
 		//DELETE DOWNED LINKS OLDER THAN 30 DAYS
 		$SELECT_DOWNED_LINKS = mysql_query("SELECT node1, node2 FROM links WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
 		while($DOWNED_LINKS = mysql_fetch_array($SELECT_DOWNED_LINKS)){
-			//eventlog("LINK " . $DOWNED_LINKS['node1'] . "-" . $DOWNED_LINKS['node2'] . " has been down for over 30 days. DELETING.");
 			eventlog ('LINKDELETE', $DOWNED_LINKS['node1'], $DOWNED_LINKS['node2']);
 		}
 		mysql_query("DELETE FROM links WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
@@ -271,7 +294,6 @@ while (1){
 		//DELETE DOWNED C-CLASS OLDER THAN 30 DAYS
 		$SELECT_DOWNED_CCLASS = mysql_query("SELECT CClass, Node_id FROM cclass WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
 		while($DOWNED_CCLASS = mysql_fetch_array($SELECT_DOWNED_CCLASS)){
-			//eventlog("C-CLASS " . $DOWNED_CCLASS['CClass'] . " from #" . $DOWNED_CCLASS['Node_id'] . " has been down for over 30 days. DELETING.");
 			eventlog ('PREFIXDELETE', $DOWNED_CCLASS['Node_id'], false, false, false, $DOWNED_CCLASS['CClass']);
 		}
 		mysql_query("DELETE FROM cclass WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
@@ -279,7 +301,6 @@ while (1){
 		//DELETE DOWNED PREPENDS OLDER THAN 30 DAYS
 		$SELECT_DOWNED_PREPEND = mysql_query("SELECT nodeid, parent_nodeid FROM prepends WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
 		while($DOWNED_PREPEND = mysql_fetch_array($SELECT_DOWNED_PREPEND)){
-			//eventlog("PREPEND " . $DOWNED_PREPEND['nodeid'] . "-" . $DOWNED_PREPEND['parent_nodeid'] . " has been down for over 30 days. DELETING.");
 			eventlog ('PREPENDDELETE', $DOWNED_PREPEND['nodeid'], $DOWNED_PREPEND['parent_nodeid']);
 		}
 		mysql_query("DELETE FROM prepends WHERE date <= '".(time()-2592000)."' AND state = 'down' ", $db);
@@ -289,13 +310,12 @@ while (1){
 
 	}else{
 		echo  "\n" . logtime() . " ---> Not enough Routers alive (".$ROUTERS_TOTAL." < ".$CONF['BGP_COLLECT_MIN_ROUTERS'].") to start collecting data!\n";
-		//eventlog("Too few Alive Routers (".$ROUTERS_TOTAL." < ".$CONF['BGP_COLLECT_MIN_ROUTERS'].") to start collecting data. Waiting for 60seconds before retrying.");
 		eventlog ('DAEMONHOLD');
 		sleep(60);		
 	}
 
 	//Wait for 1 second before starting again
-	sleep (1);
+	//sleep (1);
 
 }
 ?>

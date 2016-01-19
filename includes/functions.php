@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -64,7 +64,7 @@ if (isset($SECTION) && $SECTION == 'bgp_nodes_peers'){
 	$maintitle_title = 'BGP Prepends';
 }elseif (isset($SECTION) && $SECTION == 'bgp_illegal_prefixes'){
 	$maintitle_class = 'maintitle_bgp_illegal_prefixes';
-	$maintitle_title = 'Wrong Prefix Advertisments';
+	$maintitle_title = 'Invalid Prefix Advertisments';
 }elseif (isset($SECTION) && $SECTION == 'bgp_map'){
 	$maintitle_class = 'maintitle_bgp_map';
 	$maintitle_title = 'Live BGP Network Map';

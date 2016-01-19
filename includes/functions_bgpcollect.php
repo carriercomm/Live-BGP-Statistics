@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -52,88 +52,34 @@ function bgppaths2array ($router, $GETAS=FALSE, $PRINT=TRUE){
 			$command = "show ip bgp";
 		}
 
-		//$command = $request . (!empty ($argument) ? (" " . safeOutput ($argument)) : "");
-		$link = fsockopen ($address, $port, $errno, $errstr, 5);
-		if (!$link){
-			//printError ("Error connecting to router");
-			if ($PRINT == TRUE){
-				echo  logtime() . " [BGP] ->\t Error connecting to router: ".$errstr."\n\n";
+        
+        //NEW QUAGGA MODE - buggy for now - returns corrupted results if there is packet loss
+		$quagga = new Quagga($address, $password, $port);
+		//connect
+		if ($quagga->connect()){
+			echo  logtime() . " [BGP] ->\t Connected ok\n";
+			
+			//run command and get results
+			$DATA = $quagga->bgpd($command);
+			if ($DATA){
+				echo  logtime() . " [BGP] ->\t Got data\n";	
+			}else{
+				echo  logtime() . " [BGP] ->\t !!! Could NOT get data!\n";				
 			}
-			return;
+			
+			//disconnect
+			if ($quagga->close()){
+				echo  logtime() . " [BGP] ->\t Disconnected \n";
+			}else{
+				echo  logtime() . " [BGP] ->\t !!! Could NOT disconnect !!!\n";
+			}
 		}else{
-			echo  logtime() . " [BGP] ->\t CONNECTED OK! \n";		
+			echo  logtime() . " [BGP] ->\t !!! Could NOT connect !!! \n";			
 		}
 
-		//socket_set_timeout ($link, 5);
-		stream_set_blocking ($link, TRUE);
-		stream_set_timeout ($link, 5);
-
-		//$username = $router[$routerid]["username"];
-		//if (!empty ($username)) fputs ($link, "{$username}\n");
-		
-		fputs ($link, "{$password}\nterminal length 0\n{$command}\n");
-		echo  logtime() . " [BGP] ->\t SENT COMMAND $command\n";
-
-		if ($GETAS == FALSE){
-			//send many 'enters' to telnet in case the shell is interactive and waits for --more--
-			//pretty LAME way to do this... needs to be fixed.
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-			fputs ($link, "\n");
-			usleep ('20000');
-
-			echo  logtime() . " [BGP] ->\t SENT MANY ENTERS\n";
-
-			// let daemon print bulk of records uninterrupted
-			//if (empty ($argument) && $request > 0) 
-			sleep (3);
-		}
-
-		fputs ($link, "quit\n");
-		echo  logtime() . " [BGP] ->\t SENT QUIT\n";
-
-        while (!feof ($link)) $readbuf = $readbuf . fgets ($link, 256);
-
-		echo  logtime() . " [BGP] ->\t GOT BUFFER\n";
-
-		//wait before quiting
-		sleep(1);
-		
-		fclose ($link);
-
-		echo  logtime() . " [BGP] ->\t DISCONNECED OK!\n";
-
-		//print_r($readbuf);
-		$start = strpos ($readbuf, $command);
-		$len = strpos ($readbuf, "quit") - $start;
-		//while ($readbuf[$start + $len] != "\n") $len--;
-
-		$DATA = substr($readbuf, $start, $len);
-		//print_r($DATA);
-		//$DATA = $readbuf; 
-		//echo $DATA;
-
-		echo  logtime() . " [BGP] ->\t FORMATED AND RETURNING BGP ROUTING DATA\n";
-
+		echo  logtime() . " [BGP] ->\t Returning results\n";
+        
+        
 		$DATAparts = explode ("\n", $DATA);
 		//print_r($DATAparts);
 
@@ -160,13 +106,6 @@ function bgppaths2array ($router, $GETAS=FALSE, $PRINT=TRUE){
 function logtime (){
 	return "[" . date("M d H:i:s") . "]";
 }
-
-/*
-function eventlog ($msg){
-	global $db;
-	mysql_query("INSERT INTO `eventlog` (`msg`) VALUES ('".mysql_real_escape_string($msg)."') ", $db);	
-}
-*/
 
 function eventlog ($EVENT_CODE, $NODE1=false, $NODE2=false, $SEENBY=false, $ROUTER_IP=false, $PREFIX=false, $EVENT_MSG=false){
 	global $db;
@@ -223,7 +162,7 @@ function eventlog ($EVENT_CODE, $NODE1=false, $NODE2=false, $SEENBY=false, $ROUT
 		}
 	}elseif ($EVENT_CODE == 'ROUTERSKIP'){
 		if ($ROUTER_IP && $EVENT_MSG){
-			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `router_ip` `event_msg`) VALUES ('".$EVENT_CODE."', '".$ROUTER_IP."', '".$EVENT_MSG."') ";
+			$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`, `router_ip`, `event_msg`) VALUES ('".$EVENT_CODE."', '".$ROUTER_IP."', '".$EVENT_MSG."') ";
 		}
 	}elseif ($EVENT_CODE == 'DAEMONSTART' || $EVENT_CODE == 'DAEMONHOLD'){
 		$SQL_Q = "INSERT INTO `".$mysql_table."` (`event_code`) VALUES ('".$EVENT_CODE."') ";
@@ -242,23 +181,25 @@ function detect_prepends ($AS1, $AS2, $AS_PATH, $IS_PREPEND, $PRINT, $ROUTERAS){
 	global $db, $IS_PREPEND;
 	//echo "NUMBER: " . $i ."\n";
 	if ($AS_PATH[$AS1] == $AS_PATH[$AS2]){
-        $ASM1 = $AS1 - 1;
+		$ASM1 = $AS1 - 1;
 		$IS_PREPEND = TRUE;
 		detect_prepends ($ASM1, $AS2, $AS_PATH, $IS_PREPEND, $PRINT, $ROUTERAS);
     }elseif ($IS_PREPEND == TRUE){
     	
-    	if ($AS1 == '-1'){
+    	if ($AS1 == -1){
 			$AS_PATH[$AS1] = $ROUTERAS;
 		}
 
 		if ($PRINT == TRUE){
-			echo  logtime() . " -->PREPEND DETECTED - Ignoring Link ". $AS_PATH[$AS1+1] ."-". $AS_PATH[$AS2] ." originated by ". $AS_PATH[$AS1] ."\n";
+			echo  logtime() . " -->PREPEND DETECTED - Ignoring Link ". $AS_PATH[$AS1+1] ."-". $AS_PATH[$AS2] ." after AS ". $AS_PATH[$AS1] ."\n";
 		}
 
-		add2dbprepends($AS_PATH[$AS2], $AS_PATH[$AS1], TRUE);
-		add2tempdbprepends($AS_PATH[$AS2], $AS_PATH[$AS1], FALSE);
+		if ($AS_PATH[$AS2] != $AS_PATH[$AS1]){
+			add2dbprepends($AS_PATH[$AS2], $AS_PATH[$AS1], TRUE, $ROUTERAS);
+			add2tempdbprepends($AS_PATH[$AS2], $AS_PATH[$AS1], FALSE);
+		}
 		
-		return "PREPEND";
+		return 'PREPEND';
 
 	}else{
         return 'NOPREPEND';
@@ -301,19 +242,21 @@ function add2db ($AS1, $AS2, $ROUTERAS, $PRINT=FALSE){
 
 	if ($AS1 == $AS2){
 		echo  "\n\n" .logtime() . " SOMETHING WENT BAD! $AS1 - $AS2 shouldn't be sent here!!!\n\n";
-		//eventlog("FATAL ERROR  " . $AS1 ."-" . $AS2 . " shouldn't be passed on add2db()");
 		eventlog('FATALERROR', false, false, false, false, false, $AS1."-".$AS2." shouldn't be passed on add2db()");
 	}
 
-	if (!is_numeric($AS1)){
-		//eventlog("FATAL ERROR  AS1: " . $AS1 ." is not a number. add2db()");
+	if (!is_numeric($AS1) || $AS1 < 1){
 		eventlog('FATALERROR', false, false, false, false, false, "AS1: " . $AS1 ." is not a number. add2db()");
 		return false;
 	}
 
-	if (!is_numeric($AS2)){
-		//eventlog("FATAL ERROR  AS2: " . $AS2 ." is not a number. add2db()");
+	if (!is_numeric($AS2) || $AS2 < 1){
 		eventlog('FATALERROR', false, false, false, false, false, "AS2: " . $AS2 ." is not a number. add2db()");
+		return false;
+	}
+
+	if (!is_numeric($ROUTERAS) || $ROUTERAS < 1){
+		eventlog('FATALERROR', false, false, false, false, false, "SEENBY AS: " . $ROUTERAS ." is not a number. add2db()");
 		return false;
 	}
 
@@ -328,7 +271,6 @@ function add2db ($AS1, $AS2, $ROUTERAS, $PRINT=FALSE){
 			if ($PRINT == TRUE){
 				echo  logtime() . " Link '" . $AS1 ."-" . $AS2 . "' successfuly inserted.\n";
 			}
-			//eventlog("NEW LINK  " . $AS1 ."-" . $AS2 . " added. Detected by Router: " . $ROUTERAS);
 			eventlog('LINKNEW', $AS1, $AS2, $ROUTERAS);
 		}
 		echo mysql_error();
@@ -337,12 +279,12 @@ function add2db ($AS1, $AS2, $ROUTERAS, $PRINT=FALSE){
 			if ($PRINT == TRUE){
 				echo  logtime() . " Link '" . $AS1 ."-" . $AS2 . "' successfuly updated.\n";
 			}
-			//eventlog("LINK  " . $AS1 ."-" . $AS2 . " is UP. Detected by Router: " . $ROUTERAS);
 			eventlog('LINKUP', $AS1, $AS2, $ROUTERAS);
 		}
 		echo mysql_error();
 	}
     
+    /*
     //if (!$LINKS && !$LINKS_DOWN){
 	    $SELECT_LINK_DOWN = mysql_query ("SELECT id FROM links WHERE node1 = '" . $AS2 ."' AND node2 = '" . $AS1 ."' AND state = 'down' ", $db);
 	    if (mysql_num_rows($SELECT_LINK_DOWN) > '0'){
@@ -350,12 +292,12 @@ function add2db ($AS1, $AS2, $ROUTERAS, $PRINT=FALSE){
 				if ($PRINT == TRUE){
 					echo  logtime() . " Link '" . $AS2 ."-" . $AS1 . "' successfuly updated.\n";
 				}
-				//eventlog("LINK  " . $AS2 ."-" . $AS1 . " is UP (rev). Detected by Router: " . $ROUTERAS);
 				eventlog('LINKUP', $AS2, $AS1, $ROUTERAS);
 			}
 	    }
 	    echo mysql_error();
 	//}
+	*/
 }
 
 //Utility Function to INSERT or UPDATE database.
@@ -368,18 +310,21 @@ function add2tempdb ($AS1, $AS2, $PRINT=FALSE){
 
 
 //Utility Function to INSERT or UPDATE database.
-function add2dbprepends ($NODEID, $PARENTNODEID, $PRINT=FALSE){
+function add2dbprepends ($NODEID, $PARENTNODEID, $PRINT=FALSE, $SEENBY){
 	global $db;
 
-	if (!is_numeric($NODEID)){
-		//eventlog("FATAL ERROR Invalid NODEID passed on add2dbprepends().");
+	if (!is_numeric($NODEID) || $NODEID < 1 ){
 		eventlog('FATALERROR', false, false, false, false, false, "Invalid NODEID passed on add2dbprepends()");
 		return false;
 	}
 
-	if (!is_numeric($PARENTNODEID)){
-		//eventlog("FATAL ERROR Invalid PARENTNODEID passed on add2dbprepends().");
+	if (!is_numeric($PARENTNODEID) || $PARENTNODEID < 1 ){
 		eventlog('FATALERROR', false, false, false, false, false, "Invalid PARENTNODEID passed on add2dbprepends()");
+		return false;
+	}
+
+	if (!is_numeric($SEENBY) || $SEENBY < 1 ){
+		eventlog('FATALERROR', false, false, false, false, false, "Invalid SEENBY AS passed on add2dbprepends()");
 		return false;
 	}
 
@@ -392,8 +337,7 @@ function add2dbprepends ($NODEID, $PARENTNODEID, $PRINT=FALSE){
 			if ($PRINT == TRUE){
 				echo  logtime() . "PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly inserted.\n";
 			}
-			//eventlog("NEW PREPEND " . $NODEID ."-" . $PARENTNODEID . " detected.");
-			eventlog('PREPENDNEW', $NODEID, $PARENTNODEID);
+			eventlog('PREPENDNEW', $NODEID, $PARENTNODEID, $SEENBY);
 		}
 		echo mysql_error();
     }elseif (mysql_num_rows($SELECT_LINK_DOWN) > 0){
@@ -401,8 +345,7 @@ function add2dbprepends ($NODEID, $PARENTNODEID, $PRINT=FALSE){
 			if ($PRINT == TRUE){
 				echo  logtime() . " PREPEND '" . $NODEID ."-" . $PARENTNODEID . "' successfuly updated.\n";
 			}
-			//eventlog("PREPEND " . $NODEID ."-" . $PARENTNODEID . " is UP.");
-			eventlog('PREPENDUP', $NODEID, $PARENTNODEID);
+			eventlog('PREPENDUP', $NODEID, $PARENTNODEID, $SEENBY);
 		}
 		echo mysql_error();
     }
@@ -432,8 +375,7 @@ function add2tempdbprepends ($NODEID, $PARENTNODEID, $PRINT=FALSE){
 function ad2dbcclass ($AS, $CCLASS, $SEENBY, $PRINT=FALSE){
 	global $db;
 
-	if (!is_numeric($AS)){
-		//eventlog("FATAL ERROR Invalid AS passed on ad2dbcclass().");
+	if (!is_numeric($AS) || $AS < 1){
 		eventlog('FATALERROR', false, false, false, false, false, "Invalid AS passed on ad2dbcclass()");
 		return false;
 	}
@@ -447,7 +389,6 @@ function ad2dbcclass ($AS, $CCLASS, $SEENBY, $PRINT=FALSE){
 			if ($PRINT == TRUE){
 				echo  logtime() . " C-Class " . $CCLASS . " from #" . $AS ." successfuly inserted.\n";
 			}
-			//eventlog("NEW C-CLASS " . $CCLASS . " from #" . $AS ." added. Detected by Router: " . $SEENBY);
 			eventlog('PREFIXNEW', $AS, false, $SEENBY, false, $CCLASS);
 		}
 		echo mysql_error();
@@ -456,7 +397,6 @@ function ad2dbcclass ($AS, $CCLASS, $SEENBY, $PRINT=FALSE){
 			if ($PRINT == TRUE){
 				echo  logtime() . " C-Class ".$CCLASS." from #" . $AS ." successfuly updated.\n";
 			}
-			//eventlog("C-CLASS " . $CCLASS . " from #" . $AS ." is UP. Detected by Router: " . $SEENBY);
 			eventlog('PREFIXUP', $AS, false, $SEENBY, false, $CCLASS);
 		}
 		echo mysql_error();
@@ -519,16 +459,30 @@ function ssh_client2($IP,$PORT,$USER,$PASS,$COMMAND){
 
 	$ssh = new Net_SSH2($IP, $PORT);
 	if (!$ssh->login($USER, $PASS)) {
+		echo  logtime() . " [BGP] ->\t !!! Could NOT connect !!!\n";
 		return false;
+	}else{
+		echo  logtime() . " [BGP] ->\t Connected ok\n";
 	}
 
 	if ($data = $ssh->exec($COMMAND) ){
+		echo  logtime() . " [BGP] ->\t Got data\n";
+		echo  logtime() . " [BGP] ->\t Returning results\n";
+
+        $ssh->exec("/quit");
+		$ssh->disconnect();
+		echo  logtime() . " [BGP] ->\t Disconnected\n";
+		
 		return $data;
 	}else{
+		echo  logtime() . " [BGP] ->\t !!! Could NOT get data !!!\n";
+
+		$ssh->disconnect();
+		echo  logtime() . " [BGP] ->\t Disconnected\n";
+		
 		return false;
 	}
-
-	$ssh->disconnect();	
+	
 
 } 
 
@@ -577,7 +531,10 @@ function mikrotik_get_routerID ($IP, $USER, $PASS, $PORT){
 function mikrotik_get_bgp_table ($IP, $USER, $PASS, $PORT){
 
 	if (!$ssh = new Net_SSH2($IP, $PORT)){
+		echo  logtime() . " [BGP] ->\t !!! Could NOT connect !!!\n";
 		return "<font color=red><code><strong>SSH Error: Cannot Connect.</strong></code></font><br>\n";
+	}else{
+		echo  logtime() . " [BGP] ->\t Connected ok\n";
 	}
 	$ssh->setTimeout(20);
 	if (!$ssh->login($USER, $PASS)) {
@@ -585,7 +542,13 @@ function mikrotik_get_bgp_table ($IP, $USER, $PASS, $PORT){
 	}
 	$SSH  = $ssh->exec("/ip route print terse");
 	$SSH2 = $ssh->exec("/routing bgp instance print where name=default");
+	$ssh->exec("/quit");
 
+	if ($SSH && $SSH2){
+		echo  logtime() . " [BGP] ->\t Got data\n";
+	}else{
+		echo  logtime() . " [BGP] ->\t !!! Could NOT get data !!!\n";
+	}
 	$BGP_INSTANCE = explode(" ", $SSH2);
 
 	$RID = FALSE;
@@ -667,7 +630,7 @@ function mikrotik_get_bgp_table ($IP, $USER, $PASS, $PORT){
 
 				$BGP_STATUS = sprintf("%-2s", $BGP_STATUS);
 				$NETWORK    = sprintf("%-18s", $NETWORK);
-				$NEXTHOP    = sprintf("%-45s", $NEXTHOP);
+				$NEXTHOP    = sprintf("%-40s", $NEXTHOP);
 
 				if ($IS_BGP == TRUE){ 
 					$BGPLINES[] = $BGP_STATUS ." " . $NETWORK . $NEXTHOP . " 0 " . $AS_PATH . $AS_PATH_SEP . $ORIGIN;
@@ -681,7 +644,14 @@ function mikrotik_get_bgp_table ($IP, $USER, $PASS, $PORT){
 
 		//print_r($BGPLINES);
 
-		return implode("\n",$BGPLINES);
+		//return implode("\n",$BGPLINES);
+		
+		echo  logtime() . " [BGP] ->\t Returning results\n";
+		
+		$ssh->disconnect();
+		echo  logtime() . " [BGP] ->\t Disconnected\n";
+		
+		return $BGPLINES;
 
 	}else{
 		return "SSH ERROR";

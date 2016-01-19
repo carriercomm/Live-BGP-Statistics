@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -31,19 +31,38 @@ $action_title = "All BGP Peers (Links)";
 
 $search_vars = "";
 
-$q = mysql_real_escape_string($_GET['q'], $db);
+
+$q = mysql_real_escape_string(trim($_GET['q']), $db);
+$q_op = mysql_real_escape_string(trim($_GET['q_operator']), $db);
 if ($q) {
-	if (strstr($q,"!")){
-		$not_qsql = '!';
-		$not_qsql_cond = ' AND ';
-		$q_sql = str_replace("!", "", $q);
+
+	if ($q_op == 'is'){
+		$q_op_sql = "= '" . $q . "' "; 	
+		$q_op_cond = ' OR '; 	
+	}elseif ($q_op == 'isnot'){
+		$q_op_sql = "!= '" . $q . "' "; 	
+		$q_op_cond = ' AND '; 	
+	}elseif ($q_op == 'contains'){
+		$q_op_sql = " LIKE '%" . $q . "%' "; 	
+		$q_op_cond = ' OR '; 	
+	}elseif ($q_op == 'containsnot'){
+		$q_op_sql = "NOT LIKE '%" . $q . "%' ";
+		$q_op_cond = ' AND '; 	
+	}elseif ($q_op == 'ge'){
+		$q_op_sql = "> '" . $q . "' "; 	
+		$q_op_cond = ' AND '; 	
+	}elseif ($q_op == 'le'){
+		$q_op_sql = "< '" . $q . "' "; 	
+		$q_op_cond = ' AND '; 	
 	}else{
-		$not_qsql_cond = ' OR ';				
-		$q_sql = $q;
-	} 
-	$search_vars .= "&q=$q"; 
+		$q_op_sql = "= '" . $q . "' ";	
+		$q_op_cond = ' OR '; 	
+	}
+	
+	$search_vars .= "&q=$q&q_operator=$q_op"; 
 	$action_title = "Search: " . $q;
 }
+
 
 if (isset($_GET['search_state'])) { 
 	$s = mysql_real_escape_string($_GET['search_state'], $db);
@@ -53,10 +72,18 @@ if (isset($_GET['search_state'])) {
 	$_GET['search_state'] = 'up';		
 }
 
-if ($q){
-	$search_query = "WHERE (node1 != '6076' AND node2 != '6076') AND ($mysql_table.node1 ".$not_qsql."= '$q_sql' ".$not_qsql_cond." $mysql_table.node2 ".$not_qsql."= '$q_sql' ) AND $mysql_table.state LIKE '%$s%'  ";
+//Set ignore filters	
+if (count($CONF['IGNORE_AS_LIST']) > 0){
+	$ignore_ases = " AND (`node1` NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") AND node2 NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ) ";
 }else{
-	$search_query = "WHERE (node1 != '6076' AND node2 != '6076') AND $mysql_table.state LIKE '%$s%'  ";
+	$ignore_ases = '';										
+}
+
+if ($q){
+	//$search_query = "WHERE ($mysql_table.node1 ".$not_qsql."= '$q_sql' ".$not_qsql_cond." $mysql_table.node2 ".$not_qsql."= '$q_sql' ) AND $mysql_table.state LIKE '%$s%'  ";
+	$search_query = "WHERE ($mysql_table.node1 ".$q_op_sql." ".$q_op_cond." $mysql_table.node2 ".$q_op_sql." ) AND $mysql_table.state LIKE '%$s%' " . $ignore_ases;
+}else{
+	$search_query = "WHERE $mysql_table.state LIKE '%$s%' " . $ignore_ases;
 }
 
 
@@ -138,8 +165,18 @@ $url_vars = htmlspecialchars($url_vars);
 							<input type="hidden" name="section" value="<?=$SECTION;?>" />
 							<table border="0" cellspacing="0" cellpadding="4">
 								<tr>
-									<td>AS Number Filter:</td>
-									<td><input type="text" name="q" id="search_field_q" class="input_field" value="<?=$q?>" /></td>
+									<td>AS Number:</td>
+									<td>
+										<select name="q_operator" class="select_box">
+											<option value="is"   <? if ($_GET['q_operator'] == 'is'){   echo "selected=\"selected\""; }?> >Is</option>
+											<option value="isnot"   <? if ($_GET['q_operator'] == 'isnot'){   echo "selected=\"selected\""; }?> >Is not</option>
+											<option value="ge" <? if ($_GET['q_operator'] == 'ge'){ echo "selected=\"selected\""; }?> >Is Greater than</option>
+											<option value="le" <? if ($_GET['q_operator'] == 'le'){ echo "selected=\"selected\""; }?> >Is Less than</option>
+											<option value="contains" <? if ($_GET['q_operator'] == 'contains'){ echo "selected=\"selected\""; }?> >Contains</option>
+											<option value="containsnot" <? if ($_GET['q_operator'] == 'containsnot'){ echo "selected=\"selected\""; }?> >Does not contain</option>
+										</select>
+									</td>
+									<td><input type="text" name="q" id="search_field_q" class="input_field" value="<?=$q?>" style="width: 60px;"/></td>
 
 									<td>Peer State:</td>
 									<td>
@@ -171,11 +208,11 @@ $url_vars = htmlspecialchars($url_vars);
 
                         <table width="100%" border="0" cellspacing="2" cellpadding="5">
 							<tr>
+								<th><?=create_sort_link("state","Peer Status");?></th>
 								<th><?=create_sort_link("node1","Node A");?></th>
 								<th><?=create_sort_link("node2","Node B");?></th>
 								<th><?=create_sort_link("byrouter", "Seen by Node");?></th>
 								<th><?=create_sort_link("date","Last Status Change");?></th>
-								<th><?=create_sort_link("state","Peer Status");?></th>
 							</tr>
 							<!-- RESULTS START -->
 							<?
@@ -193,12 +230,12 @@ $url_vars = htmlspecialchars($url_vars);
 							
 							?>      
 							<tr onmouseover="this.className='on' " onmouseout="this.className='off' " id="tr-<?=$LISTING['id'];?>">
-								<td nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['node1'];?>" title="Show #<?=$LISTING['node1'];?> <?=$NODE1['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['node1'];?> <?=$NODE1['Node_name'];?></a></td>
+								<td align="center" nowrap ><a href="javascript:void(0)" class="<?if (staff_help()){?>tip_south<?}?> <? if ($LISTING['state'] == 'up') { ?>enabled<? } else { ?>disabled<? } ?>" title="Prepend is: <?=strtoupper($LISTING['state']);?>"><span>Prepend is: <?=strtoupper($LISTING['state']);?></span></a></td>
+                            	<td nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['node1'];?>" title="Show #<?=$LISTING['node1'];?> <?=$NODE1['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['node1'];?> <?=$NODE1['Node_name'];?></a></td>
 								<td nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['node2'];?>" title="Show #<?=$LISTING['node2'];?> <?=$NODE2['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['node2'];?> <?=$NODE2['Node_name'];?></a></td>
 								<td nowrap><a href="index.php?section=bgp_nodes_peers&nodeid=<?=$LISTING['byrouter'];?>" title="Show #<?=$LISTING['byrouter'];?> <?=$NODE3['Node_name'];?> Node Peers" class="<?if (staff_help()){?>tip_south<?}?>">#<?=$LISTING['byrouter'];?> <?=$NODE3['Node_name'];?></a></td>
 								<td align="center" nowrap ><?=sec2hms($LISTING['date'], time());?></td>
-								<td align="center" nowrap ><a href="javascript:void(0)" class="<?if (staff_help()){?>tip_south<?}?> <? if ($LISTING['state'] == 'up') { ?>enabled<? } else { ?>disabled<? } ?>" title="Prepend is: <?=strtoupper($LISTING['state']);?>"><span>Prepend is: <?=strtoupper($LISTING['state']);?></span></a></td>
-                            </tr>
+							</tr>
 							<?}?>
 
 							<!-- RESULTS END -->

@@ -1,9 +1,9 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
-* (c)2008-2014 for AWMN                                                       *
+* (c)2008-2016 for AWMN                                                       *
 * Credits: see CREDITS file                                                   *
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify        *
@@ -47,12 +47,21 @@ if ($CONF['GMAP_ENABLED'] != true){
 
   	    						polyline:{
   	    	        				values: [
-                    					<?  	   	   
-										$SELECT_LINKS = mysql_query ("SELECT node1, node2, id, state FROM links WHERE node1 != '6076' AND node1 != '9134' AND node2 != '6076' AND node2 != '9134'   ", $db);
+                    					<?
+										//Set ignore filters	
+										if (count($CONF['IGNORE_AS_LIST']) > 0){
+											$ignore_ases = " WHERE node1 NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") AND node2 NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ";
+											$ignore_ases2 = " AND ( nodes.Node_id NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") AND links.node1 NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") AND links.node2 NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ) ";
+										}else{
+											$ignore_ases = '';										
+											$ignore_ases2 = '';										
+										}                    					
+                    					  	   	   
+										$SELECT_LINKS = mysql_query ("SELECT node1, node2, id, state FROM links " . $ignore_ases, $db);
 										while ($LINKS = mysql_fetch_array($SELECT_LINKS)){
-											$SELECT_NODE1 = mysql_query ("SELECT lat, lon FROM nodes WHERE Node_id  = '$LINKS[node1]' ", $db);
+											$SELECT_NODE1 = mysql_query ("SELECT lat, lon FROM nodes WHERE Node_id  = '".$LINKS['node1']."' ", $db);
 											$NODE1 = mysql_fetch_array($SELECT_NODE1);
-											$SELECT_NODE2 = mysql_query ("SELECT lat, lon FROM nodes WHERE Node_id  = '$LINKS[node2]' ", $db);
+											$SELECT_NODE2 = mysql_query ("SELECT lat, lon FROM nodes WHERE Node_id  = '".$LINKS['node2']."' ", $db);
 											$NODE2 = mysql_fetch_array($SELECT_NODE2);
 											if ($NODE1['lat'] && $NODE1['lon'] && $NODE2['lat'] && $NODE2['lon']){
 												if ($LINKS['state'] == 'up'){
@@ -80,7 +89,7 @@ if ($CONF['GMAP_ENABLED'] != true){
 								marker:{
 	                                values: [
                     					<?
-	                                    $final_sql = "SELECT nodes.Node_id, nodes.Node_name, nodes.Node_area, nodes.lat, nodes.lon, links.node1, links.node2 FROM nodes, links WHERE ( nodes.Node_id = links.node1 OR nodes.Node_id = links.node2 ) AND ( nodes.Node_id != '6076' AND nodes.Node_id != '9134' AND links.node1 != '6076' AND links.node2 != '6076' AND links.node1 != '9431' AND links.node2 != '9431' ) GROUP BY nodes.Node_id";
+	                                    $final_sql = "SELECT nodes.Node_id, nodes.Node_name, nodes.Node_area, nodes.lat, nodes.lon, links.node1, links.node2 FROM nodes, links WHERE ( nodes.Node_id = links.node1 OR nodes.Node_id = links.node2 ) ".$ignore_ases2." GROUP BY nodes.Node_id";
 										
 										$SELECT_ROUTERS = mysql_query($final_sql, $db);
 										if (mysql_num_rows($SELECT_ROUTERS)){

@@ -1,6 +1,6 @@
 <?php
 /*-----------------------------------------------------------------------------
-* Live PHP Statistics                                                         *
+* Live BGP Statistics                                                         *
 *                                                                             *
 * Main Author: Vaggelis Koutroumpas vaggelis@koutroumpas.gr                   *
 * (c)2008-2016 for AWMN                                                       *
@@ -30,26 +30,38 @@ $sorting_array = array("date", "event_code");
 
 $action_title = "All Event Logs"; 
 
+if (count($CONF['IGNORE_AS_LIST']) > 0){
+	$sql_event_code = " WHERE ( node1 NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") AND node2 NOT IN (".join (",", $CONF['IGNORE_AS_LIST']).") ) ";
+	if ($_GET['event_code']){
+		$sql_event_code .= " AND ";
+	}		
+}else{
+	if ($_GET['event_code']){
+		$sql_event_code = " WHERE ";
+	}	
+} 
+
 $search_vars = "";
+$search_query = "";
 
 // Filtering
 if ($_GET['event_code']){
 	
 	if (strstr($_GET['event_code'], 'LINK')){
 		if ($_GET['event_code'] == 'LINKALL'){
-			$sql_event_code = "WHERE  `event_code` LIKE 'LINK%' ";
+			$sql_event_code .= " `event_code` LIKE 'LINK%' ";
 			$search_vars .="&event_code=LINKALL";
 		}elseif($_GET['event_code'] == 'LINKNEW'){
-			$sql_event_code = "WHERE  `event_code` = 'LINKNEW' ";
+			$sql_event_code .= "  `event_code` = 'LINKNEW' ";
 			$search_vars .="&event_code=LINKNEW";
 		}elseif($_GET['event_code'] == 'LINKUP'){
-			$sql_event_code = "WHERE  `event_code` = 'LINKUP' ";
-			$search_vars .="&event_code=LINKALL";
-		}elseif($_GET['event_code'] == 'LINKUP'){
-			$sql_event_code = "WHERE  `event_code` = 'LINKDOWN' ";
-			$search_vars .="&event_code=LINKALL";
+			$sql_event_code .= "  `event_code` = 'LINKUP' ";
+			$search_vars .="&event_code=LINKUP";
 		}elseif($_GET['event_code'] == 'LINKDOWN'){
-			$sql_event_code = "WHERE  `event_code` = 'LINKDELETE' ";
+			$sql_event_code .= "  `event_code` = 'LINKDOWN' ";
+			$search_vars .="&event_code=LINKDOWN";
+		}elseif($_GET['event_code'] == 'LINKDELETE'){
+			$sql_event_code .= "  `event_code` = 'LINKDELETE' ";
 			$search_vars .="&event_code=LINKDELETE";
 		}
 		//Filter by AS		
@@ -60,48 +72,54 @@ if ($_GET['event_code']){
 		}
 	}elseif (strstr($_GET['event_code'], 'PREFIX')){
 		if ($_GET['event_code'] == 'PREFIXALL'){
-			$sql_event_code = "WHERE  `event_code` LIKE 'PREFIX%' ";
+			$sql_event_code .= "  `event_code` LIKE 'PREFIX%' ";
 			$search_vars .="&event_code=PREFIXALL";
 		}elseif($_GET['event_code'] == 'PREFIXNEW'){
-			$sql_event_code = "WHERE  `event_code` = 'PREFIXNEW' ";
+			$sql_event_code .= "  `event_code` = 'PREFIXNEW' ";
 			$search_vars .="&event_code=PREFIXNEW";
 		}elseif($_GET['event_code'] == 'PREFIXUP'){
-			$sql_event_code = "WHERE  `event_code` = 'PREFIXUP' ";
+			$sql_event_code .= "  `event_code` = 'PREFIXUP' ";
 			$search_vars .="&event_code=PREFIXUP";
 		}elseif($_GET['event_code'] == 'PREFIXDOWN'){
-			$sql_event_code = "WHERE  `event_code` = 'PREFIXDOWN' ";
+			$sql_event_code .= "  `event_code` = 'PREFIXDOWN' ";
 			$search_vars .="&event_code=PREFIXDOWN";
 		}elseif($_GET['event_code'] == 'PREFIXDELETE'){
-			$sql_event_code = "WHERE  `event_code` = 'PREFIXDELETE' ";
+			$sql_event_code .= "  `event_code` = 'PREFIXDELETE' ";
 			$search_vars .="&event_code=PREFIXDELETE";
 		}
 		//Filter by Prefix		
 		if ($_GET['prefix']){
 			$_GET['prefix'] = htmlentities($_GET['prefix']);
-			$search_query = " AND `prefix` LIKE '%".mysql_real_escape_string($_GET['prefix'])."%' ";
+			
+			//Ignore if prefix is in Prefix Ignore List
+			if (in_array($_GET['prefix'], $CONF['IGNORE_PREFIX_LIST'])){
+				$search_query = " AND `prefix` = 0 ";				
+			}else{
+				$search_query = " AND `prefix` LIKE '%".mysql_real_escape_string($_GET['prefix'])."%' ";	
+			}
 			$search_vars .="&prefix=".$_GET['prefix'];
 		}
 		//Filter by AS		
 		if ($_GET['as']){
 			$_GET['as'] = (int)$_GET['as'];
-			$search_query = " AND ( `node1` = '".$_GET['as']."' OR `seenby` = '".$_GET['as']."' ) ";
+			$search_query .= " AND ( `node1` = '".$_GET['as']."' OR `seenby` = '".$_GET['as']."' ) ";
 			$search_vars .="&as=".$_GET['as'];
 		}
 	}elseif (strstr($_GET['event_code'], 'PREPEND')){
 		if ($_GET['event_code'] == 'PREPENDALL'){
-			$sql_event_code = "WHERE  `event_code` LIKE 'PREPEND%' ";
+			$sql_event_code .= "  `event_code` LIKE 'PREPEND%' ";
 			$search_vars .="&event_code=PREPENDALL";
 		}elseif($_GET['event_code'] == 'PREPENDNEW'){
-			$sql_event_code = "WHERE  `event_code` = 'PREPENDNEW' ";
+			$sql_event_code .= "  `event_code` = 'PREPENDNEW' ";
 			$search_vars .="&event_code=PREPENDNEW";
 		}elseif($_GET['event_code'] == 'PREPENDUP'){
-			$sql_event_code = "WHERE  `event_code` = 'PREPENDUP' ";
+			$sql_event_code .= "  `event_code` = 'PREPENDUP' ";
 			$search_vars .="&event_code=PREPENDUP";
 		}elseif($_GET['event_code'] == 'PREPENDDOWN'){
-			$sql_event_code = "WHERE  `event_code` = 'PREPENDDOWN' ";
+			$sql_event_code .= "  `event_code` = 'PREPENDDOWN' ";
 			$search_vars .="&event_code=PREPENDDOWN";
 		}elseif($_GET['event_code'] == 'PREPENDDELETE'){
-			$sql_event_code = "WHERE  `event_code` = 'PREPENDELETE' ";
+			$sql_event_code .= "  `event_code` = 'PREPENDELETE' ";
 			$search_vars .="&event_code=PREPENDELETE";
 		}
 		//Filter by AS		
@@ -111,7 +129,7 @@ if ($_GET['event_code']){
 			$search_vars .="&as=".$_GET['as'];
 		}				
 	}elseif($_GET['event_code'] == 'ROUTERSKIP'){
-		$sql_event_code = "WHERE  `event_code` = 'ROUTERSKIP' ";
+		$sql_event_code .= "  `event_code` = 'ROUTERSKIP' ";
 		$search_vars .="&event_code=ROUTERSKIP";
 		//Filter by Prefix		
 		if ($_GET['router_ip']){
@@ -120,13 +138,13 @@ if ($_GET['event_code']){
 			$search_vars .="&router_ip=".$_GET['router_ip'];
 		}
 	}elseif($_GET['event_code'] == 'DAEMONSTART'){
-		$sql_event_code = "WHERE  `event_code` = 'DAEMONSTART' ";
+		$sql_event_code .= "  `event_code` = 'DAEMONSTART' ";
 		$search_vars .="&event_code=DAEMONSTART";
 	}elseif($_GET['event_code'] == 'DAEMONHOLD'){
-		$sql_event_code = "WHERE  `event_code` = 'DAEMONHOLD' ";
+		$sql_event_code .= "  `event_code` = 'DAEMONHOLD' ";
 		$search_vars .="&event_code=DAEMONHOLD";
 	}elseif($_GET['event_code'] == 'FATALERROR'){
-		$sql_event_code = "WHERE  `event_code` = 'FATALERROR' ";
+		$sql_event_code .= "  `event_code` = 'FATALERROR' ";
 		$search_vars .="&event_code=FATALERROR";
 	}
 }
@@ -188,9 +206,9 @@ for($i=0;$i<$pages;$i++){
 $total_pages=$i; // sinolo selidon
 
 //Final Query for records listing
-$SELECT_RESULTS  = mysql_query("SELECT `".$mysql_table."`.* FROM `".$mysql_table."` ".$sql_event_code." ".$search_query." ".$order." LIMIT ".$pageno.", ".$e ,$db);
+$SELECT_RESULTS  = mysql_query("SELECT `".$mysql_table."`.* FROM `".$mysql_table."` ".$sql_event_code." ".$search_query."  ".$order." LIMIT ".$pageno.", ".$e ,$db);
 $search_vars = htmlspecialchars($search_vars);
-
+$url_vars = $search_vars;
 ?>
 <script>
 	$(function() {
@@ -353,52 +371,93 @@ $search_vars = htmlspecialchars($search_vars);
 								$i=-1;
 								while($LISTING = mysql_fetch_array($SELECT_RESULTS)){
 								$i++;
+								//if ($LISTING['node1'] != 6076 && $LISTING['node2'] != 6076){
+								//ignore ASes found in ignore list.
+								//if (in_array($LISTING['node1'], $CONF['IGNORE_AS_LIST']) && in_array($LISTING['node2'], $CONF['IGNORE_AS_LIST']) ){
+									
+								if ($LISTING['node1']){
+									$SELECT_NODE1 = mysql_query("SELECT `id`, `Node_id`, `Node_name` FROM `nodes` WHERE `Node_id` = '".$LISTING['node1']."' ", $db);
+									$NODE1 = mysql_fetch_array($SELECT_NODE1);
+									if ($NODE1['Node_name']){
+										$TIPSY1 = " class=\"tip_south\" title=\"#".$NODE1['Node_id']." ".$NODE1['Node_name']."\" ";
+									}else{
+										$TIPSY1 = "";
+									}
+								}
+								if ($LISTING['node2']){
+									$SELECT_NODE2 = mysql_query("SELECT `id`, `Node_id`, `Node_name` FROM `nodes` WHERE `Node_id` = '".$LISTING['node2']."' ", $db);
+									$NODE2 = mysql_fetch_array($SELECT_NODE2);
+									if ($NODE2['Node_name']){
+										$TIPSY2 = " class=\"tip_south\" title=\"#".$NODE2['Node_id']." ".$NODE2['Node_name']."\" ";
+									}else{
+										$TIPSY2 = "";
+									}
+								}
+								if ($LISTING['seenby']){
+									$SELECT_SEENBY = mysql_query("SELECT `id`, `Node_id`, `Node_name` FROM `nodes` WHERE `Node_id` = '".$LISTING['seenby']."' ", $db);
+									$SEENBY = mysql_fetch_array($SELECT_SEENBY);
+									if ($SEENBY['Node_name']){
+										$TIPSY3 = " class=\"tip_south\" title=\"#".$SEENBY['Node_id']." ".$SEENBY['Node_name']."\" ";
+									}else{
+										$TIPSY3 = "";
+									}
+								}
+								
 								
 								if (strstr($LISTING['event_code'], "LINK" ) ){
 									if ($LISTING['event_code'] == 'LINKNEW' ){
 										$EVENT_CODE = "<span class='blue'>".$LISTING['event_code']."</span>";
-										$EVENT = "New peer/link ".$LISTING['node1']."-".$LISTING['node2']." added. Peer detected by AS ". $LISTING['seenby'];
+										$EVENT = "New peer/link <strong><a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a>-<a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node2']."\" target=\"_blank\" ".$TIPSY2.">".$LISTING['node2']."</a></strong> added. Peer detected by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['seenby']."\" target=\"_blank\" ".$TIPSY3.">". $LISTING['seenby'] ."</a></strong>";
 									}elseif($LISTING['event_code'] == 'LINKUP' ){
 										$EVENT_CODE = "<span class='green'>".$LISTING['event_code']."</span>";
-										$EVENT = "Peer/link ".$LISTING['node1']."-".$LISTING['node2']." is up. Peer detected by AS ". $LISTING['seenby'];
+										$EVENT = "Peer/link <strong><a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a>-<a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node2']."\" target=\"_blank\" ".$TIPSY2.">".$LISTING['node2']."</a></strong> is up. Peer detected by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['seenby']."\" target=\"_blank\" ".$TIPSY3.">". $LISTING['seenby'] ."</a></strong>";
 									}elseif($LISTING['event_code'] == 'LINKDOWN' ){
 										$EVENT_CODE = "<span class='red'>".$LISTING['event_code']."</span>";
-										$EVENT = "Peer/link ".$LISTING['node1']."-".$LISTING['node2']." went down";
+										$EVENT = "Peer/link <strong><a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a>-<a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node2']."\" target=\"_blank\" ".$TIPSY2.">".$LISTING['node2']."</a></strong> went down";
 									}elseif($LISTING['event_code'] == 'LINKDELETE' ){
 										$EVENT_CODE = "<span class='gray'>".$LISTING['event_code']."</span>";
-										$EVENT = "Peer/link ".$LISTING['node1']."-".$LISTING['node2']." deleted after 30 days down";
-									}
+										$EVENT = "Peer/link <strong><a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a>-<a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node2']."\" target=\"_blank\" ".$TIPSY2.">".$LISTING['node2']."</a></strong> deleted after 30 days down";
+									}                                             
 								}elseif (strstr($LISTING['event_code'], "PREFIX" ) ){
 									if ($LISTING['event_code'] == 'PREFIXNEW' ){
 										$EVENT_CODE = "<span class='blue'>".$LISTING['event_code']."</span>";
-										$EVENT = "New prefix ".$LISTING['prefix']." advertised by AS ".$LISTING['node1'].". Advertisment detected by AS ". $LISTING['seenby'];
+										$EVENT = "New prefix <strong><a href=\"index.php?section=bgp_prefixes&q_operator=is&q=&p_operator=is&p=".$LISTING['prefix']."&search_state=\" target=\"_blank\"  class=\"tip_south\" title=\"Show details about this prefix\" >".$LISTING['prefix']."</a></strong> advertised by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a></strong>. Advertisment detected by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['seenby']."\" target=\"_blank\" ".$TIPSY3.">". $LISTING['seenby'] . "</a></strong>";
 									}elseif($LISTING['event_code'] == 'PREFIXUP' ){
 										$EVENT_CODE = "<span class='green'>".$LISTING['event_code']."</span>";
-										$EVENT = "Prefix ".$LISTING['prefix']." advertised by AS ".$LISTING['node1']." is up. Advertisment detected by AS ". $LISTING['seenby'];
+										$EVENT = "Prefix <strong><a href=\"index.php?section=bgp_prefixes&q_operator=is&q=&p_operator=is&p=".$LISTING['prefix']."&search_state=\" target=\"_blank\" class=\"tip_south\" title=\"Show details about this prefix\" >".$LISTING['prefix']."</a></strong> advertised by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a></strong> is up. Advertisment detected by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['seenby']."\" target=\"_blank\" ".$TIPSY3.">". $LISTING['seenby'] . "</a></strong>";
 									}elseif($LISTING['event_code'] == 'PREFIXDOWN' ){
 										$EVENT_CODE = "<span class='red'>".$LISTING['event_code']."</span>";
-										$EVENT = "Prefix ".$LISTING['prefix']." no longer advertised by AS ".$LISTING['node1'];
+										$EVENT = "Prefix <strong><a href=\"index.php?section=bgp_prefixes&q_operator=is&q=&p_operator=is&p=".$LISTING['prefix']."&search_state=\" target=\"_blank\" class=\"tip_south\" title=\"Show details about this prefix\" >".$LISTING['prefix']."</a></strong> no longer advertised by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1'] . "</a></strong>";
 									}elseif($LISTING['event_code'] == 'PREFIXDELETE' ){
 										$EVENT_CODE = "<span class='gray'>".$LISTING['event_code']."</span>";
-										$EVENT = "Prefix ".$LISTING['prefix']." hasn't been advertised by AS ".$LISTING['node1']." for 30 days. Deleting.";
+										$EVENT = "Prefix <strong><a href=\"index.php?section=bgp_prefixes&q_operator=is&q=&p_operator=is&p=".$LISTING['prefix']."&search_state=\" target=\"_blank\" class=\"tip_south\" title=\"Show details about this prefix\" >".$LISTING['prefix']."</a></strong> hasn't been advertised by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a></strong> for 30 days. Deleting.";
 									}
 								}elseif (strstr($LISTING['event_code'], "PREPEND" ) ){
 									if ($LISTING['event_code'] == 'PREPENDNEW' ){
 										$EVENT_CODE = "<span class='brown'>".$LISTING['event_code']."</span>";
-										$EVENT = "New prepend on AS ".$LISTING['node1']." with parent AS ".$LISTING['node2']." added. Prepend detected by AS ". $LISTING['seenby'];
+										$EVENT = "New prepend on <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a></strong> with parent <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node2']."\" target=\"_blank\" ".$TIPSY2.">".$LISTING['node2']."</a></strong> added. Prepend detected by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['seenby']."\" target=\"_blank\" ".$TIPSY3.">". $LISTING['seenby'] . "</a></strong>";
 									}elseif($LISTING['event_code'] == 'PREPENDUP' ){
 										$EVENT_CODE = "<span class='green'>".$LISTING['event_code']."</span>";
-										$EVENT = "Prepend on AS ".$LISTING['node1']." with parent AS ".$LISTING['node2']." is up. Prepend detected by AS ". $LISTING['seenby'];
+										$EVENT = "Prepend on <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a></strong> with parent <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node2']."\" target=\"_blank\" ".$TIPSY2.">".$LISTING['node2']."</a></strong> is up. Prepend detected by <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['seenby']."\" target=\"_blank\" ".$TIPSY3.">". $LISTING['seenby'] . "</a></strong>";
 									}elseif($LISTING['event_code'] == 'PREPENDDOWN' ){
 										$EVENT_CODE = "<span class='red'>".$LISTING['event_code']."</span>";
-										$EVENT = "Prepend on AS ".$LISTING['node1']." with parent AS ".$LISTING['node2']." went down";
+										$EVENT = "Prepend on <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a></strong> with parent <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node2']."\" target=\"_blank\" ".$TIPSY2.">".$LISTING['node2']."</a></strong> went down";
 									}elseif($LISTING['event_code'] == 'PREPENDDELETE' ){
 										$EVENT_CODE = "<span class='gray'>".$LISTING['event_code']."</span>";
-										$EVENT = "Prepend on AS ".$LISTING['node1']." with parent AS ".$LISTING['node2']." deleted after 30 days down";
+										$EVENT = "Prepend on <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node1']."\" target=\"_blank\" ".$TIPSY1.">".$LISTING['node1']."</a></strong> with parent <strong>AS <a href=\"index.php?section=bgp_nodes_peers&nodeid=".$LISTING['node2']."\" target=\"_blank\" ".$TIPSY2.">".$LISTING['node2']."</a></strong> deleted after 30 days down";
 									}
 								}elseif ($LISTING['event_code'] == 'ROUTERSKIP' ){
+									if ($LISTING['router_ip']){
+										$SELECT_ROUTER = mysql_query("SELECT `id`, `NodeName`, `NodeID`, `Ip` FROM `".$CONF['db2']."`.`routers` WHERE `Ip` = '".$LISTING['router_ip']."' ", $db2);
+										$ROUTER = mysql_fetch_array($SELECT_ROUTER);
+										if ($ROUTER['NodeName']){
+											$ROUTER_EVENT = "<strong><a href='http://".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."/index.php?section=lg&bgp_router=".$ROUTER['id']."&bgp_command=1&arguements=' target='_blank' class=\"tip_south\" title=\"View Node's BGP Routing Table on ".$CONF['BGP_LOOKING_GLASS_NG_DOMAIN']."\">#" . $ROUTER['NodeID'] . " " . $ROUTER['NodeName'] . " (".$ROUTER['Ip'].")</a></strong>"; 
+										}else{
+											$ROUTER_EVENT = "with <strong>IP ".$LISTING['router_ip']."</strong>";
+										}
 										$EVENT_CODE = "<span class='red'>".$LISTING['event_code']."</span>";
-										$EVENT = "Router with IP ".$LISTING['router_ip']." seems to be down while trying to collect BGP data. Skipping";
+										$EVENT = "Router ".$ROUTER_EVENT." seems to be down while trying to collect BGP data. Skipping";
+									}
 								}elseif ($LISTING['event_code'] == 'DAEMONSTART' ){
 										$EVENT_CODE = "<span class='orange'>".$LISTING['event_code']."</span>";
 										$EVENT = "BGP Statistics Collector Daemon started";
@@ -415,7 +474,8 @@ $search_vars = htmlspecialchars($search_vars);
 									<td nowrap><?=$EVENT_CODE;?></td>
 									<td ><?=$EVENT;?></td>
 								</tr>
-								<?}?>
+								<?//}
+								}?>
                                 <!-- RESULTS END -->
 							</table>
 

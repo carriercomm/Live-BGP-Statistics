@@ -6,7 +6,9 @@ jQuery Library http://jquery.com/
 jQuery-UI Library http://jqueryui.com/
 jQuery Tipsy http://onehackoranother.com/projects/jquery/tipsy/
 jQuery Gmap3 http://gmap3.net/
+jQuery Migrate https://github.com/jquery/jquery-migrate/
 phpseclib http://phpseclib.sourceforge.net/
 PHP Simple HTML DOM Parser http://sourceforge.net/projects/simplehtmldom/
 All icons used are in the public domain http://www.iconfinder.com
 Parts of code for processing the BGP prefix list output were borrowed from Nister's BGPMap @ AWMN.
+Cisco for PHP Class by Ray Soucy. Borrowed and modified to work with Quagga's BGPd. http://www.soucy.org/

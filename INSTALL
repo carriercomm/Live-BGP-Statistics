@@ -1,11 +1,11 @@
-Download Live BGP Statistics zip from GitHub and extract it to a web accessible folder.
+Download Live BGP Statistics zip (or git clone) from GitHub and extract it to a web accessible folder.
 
 Create a MySQL database and import the db_schema.sql to create the system's tables.
 
 Copy includes/config.php.dist to includes/config.php and edit it appropriately.
 
 Make sure you install phpseclib http://phpseclib.sourceforge.net/ on your PHP's include path.
-It's needed for SSH2 access to MikroTik routers.
+It's needed for SSH2 access to MikroTik routers. Version 0.1.0 is known to work ok.
 
 Also make sure you have Memcached installed and running on 127.0.0.1:11211
 
